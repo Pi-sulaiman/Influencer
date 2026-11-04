@@ -152,13 +152,13 @@ function country_options_html($selected = '', $withOther = true, $extra = [])
         $out .= '<option value="' . e($value) . '" data-sub="' . e($label[1]) . '"' . ($selected === $value ? ' selected' : '') . '>' . e($label[0]) . '</option>';
     }
     foreach (country_catalog() as $name => $c) {
-        $sub = $c[1] . ' · ' . ($curs[$c[1]][0] ?? $c[1]);
+        // Country names only; the currency is kept as data for auto-selecting it.
         $sel = ($selected === $name || $selected === $c[0]) ? ' selected' : '';
-        $out .= '<option value="' . e($name) . '" data-code="' . e($c[0]) . '" data-currency="' . e($c[1]) . '" data-sub="' . e($sub) . '"' . $sel . '>' . e($name) . '</option>';
+        $out .= '<option value="' . e($name) . '" data-code="' . e($c[0]) . '" data-currency="' . e($c[1]) . '"' . $sel . '>' . e($name) . '</option>';
     }
     if ($withOther) {
         $isOther = $selected !== '' && !isset(country_catalog()[$selected]) && !isset($extra[$selected]);
-        $out .= '<option value="' . ($isOther ? e($selected) : 'Other') . '" data-sub="Not listed"' . ($isOther ? ' selected' : '') . '>' . ($isOther ? e($selected) : 'Other country') . '</option>';
+        $out .= '<option value="' . ($isOther ? e($selected) : 'Other') . '"' . ($isOther ? ' selected' : '') . '>' . ($isOther ? e($selected) : 'Other country') . '</option>';
     }
     return $out;
 }
@@ -170,4 +170,13 @@ function currency_options_html($selected)
         $out .= '<option value="' . e($code) . '" data-symbol="' . e($c[1]) . '" data-sub="' . e($c[0]) . '"' . ($selected === $code ? ' selected' : '') . '>' . e(trim($c[1]) . ' ' . $code) . '</option>';
     }
     return $out;
+}
+
+/** Languages creators commonly make content in (Indian languages first). */
+function language_options()
+{
+    return ['English', 'Hindi', 'Bengali', 'Marathi', 'Telugu', 'Tamil', 'Gujarati', 'Urdu', 'Kannada', 'Malayalam', 'Odia', 'Punjabi',
+        'Assamese', 'Bhojpuri', 'Konkani', 'Maithili', 'Nepali', 'Sinhala', 'Arabic', 'French', 'Spanish', 'Portuguese', 'German',
+        'Italian', 'Russian', 'Turkish', 'Persian', 'Indonesian', 'Malay', 'Filipino', 'Thai', 'Vietnamese', 'Japanese', 'Korean',
+        'Mandarin', 'Cantonese', 'Swahili', 'Hausa', 'Yoruba', 'Dutch', 'Polish', 'Swedish', 'Greek', 'Hebrew'];
 }

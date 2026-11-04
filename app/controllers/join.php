@@ -100,8 +100,11 @@ function join_form()
 
     if (is_post()) {
         foreach (join_fields() as $f) {
-            $data[$f] = mb_substr((string) input($f), 0, in_array($f, ['bio', 'pitch'], true) ? 1500 : 190);
+            $raw = input($f);
+            $data[$f] = is_array($raw) ? '' : mb_substr((string) $raw, 0, in_array($f, ['bio', 'pitch'], true) ? 1500 : 190);
         }
+        $langs = array_values(array_intersect(input_array('languages'), language_options()));
+        if ($langs) $data['languages'] = implode(', ', array_slice($langs, 0, 10));
         $data['email'] = strtolower($data['email']);
         $data['niches'] = array_slice(array_intersect(input_array('niches'), niche_options()), 0, 5);
         $data['content_types'] = array_intersect(input_array('content_types'), content_type_options());
@@ -118,7 +121,8 @@ function join_form()
 
         if (mb_strlen($data['full_name']) < 2) $errors['full_name'] = 'Please enter your full name.';
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) $errors['email'] = 'Enter a valid email address.';
-        if ($data['phone'] !== '' && !preg_match('/^[0-9+()\-\s.]{6,25}$/', $data['phone'])) $errors['phone'] = 'Enter a valid phone number.';
+        if ($data['phone'] === '') $errors['phone'] = 'Add your WhatsApp number so we can send you briefs.';
+        elseif (!preg_match('/^[0-9+()\-\s.]{6,25}$/', $data['phone']) || strlen(preg_replace('/\D/', '', $data['phone'])) < 8) $errors['phone'] = 'Enter a valid WhatsApp number with country code.';
         if ($data['country'] === '') $errors['country'] = 'Tell us which country you are based in.';
 
         $hasChannel = false;
@@ -164,6 +168,17 @@ function join_form()
                 $photo = save_image_upload($_FILES['photo'], 'creators', 900);
             } catch (RuntimeException $e) {
                 $errors['photo'] = $e->getMessage();
+            }
+        }
+        $extraUploads = [];
+        foreach (['rate_card_image' => 'ratecards', 'insights_image' => 'insights'] as $field => $folder) {
+            $sent = isset($_FILES[$field]) && ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
+            if (!$errors && $sent) {
+                try {
+                    $extraUploads[$field] = save_image_upload($_FILES[$field], $folder, 1800);
+                } catch (RuntimeException $e) {
+                    $errors[$field] = $e->getMessage();
+                }
             }
         }
 
@@ -220,6 +235,9 @@ function join_form()
             }
             if ($photo) {
                 $row['photo'] = $photo;
+            }
+            foreach ($extraUploads as $field => $path) {
+                $row[$field] = $path;
             }
 
             if ($existing) {

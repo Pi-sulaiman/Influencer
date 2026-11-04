@@ -110,6 +110,17 @@ $tier = creator_tier($inf['total_followers']);
             </div>
         </section>
 
+        <?php if (!empty($inf['rate_card_image']) || !empty($inf['insights_image'])): ?>
+            <section class="card">
+                <div class="card-head"><h2>Uploads</h2><span class="small muted">Click to open full size</span></div>
+                <div class="card-body upload-thumbs">
+                    <?php foreach (['insights_image' => 'Insights screenshot', 'rate_card_image' => 'Rate card'] as $k => $label): if (!empty($inf[$k])): ?>
+                        <a href="<?= e(upload_url($inf[$k])) ?>" target="_blank" rel="noopener"><img src="<?= e(upload_url($inf[$k])) ?>" alt="<?= e($label) ?>" loading="lazy"><span><?= e($label) ?></span></a>
+                    <?php endif; endforeach; ?>
+                </div>
+            </section>
+        <?php endif; ?>
+
         <?php if ($inf['bio']): ?>
             <section class="card"><div class="card-head"><h2>Bio</h2></div><div class="card-body"><p class="msg-body"><?= e($inf['bio']) ?></p></div></section>
         <?php endif; ?>

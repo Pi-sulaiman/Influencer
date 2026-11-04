@@ -239,3 +239,87 @@
 .join-thanks .thanks-mark { position: relative; width: 120px; height: 120px; margin: 0 auto; border-radius: 34px; background: var(--red); display: grid; place-items: center; animation: pop .7s var(--ease-spring) both; }
 .join-thanks .thanks-mark svg { width: 62px; fill: rgba(255, 255, 255, .25); position: absolute; }
 .join-thanks .thanks-mark i { position: relative; color: #fff; font-size: 54px; }
+
+/* =========================================================================
+   Intro slide, collapsed header, WhatsApp, uploads, broadcast step
+   ========================================================================= */
+.ji-cta { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; margin-top: 24px; }
+.ji-meta { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.ji-toggle { display: none; align-items: center; gap: 6px; margin-top: 10px; padding: 0; border: 0; background: none; font-weight: 700; font-size: 14px; color: var(--accent-text); }
+.ji-toggle i { transition: transform .3s var(--ease); }
+.join-intro.is-open .ji-toggle i { transform: rotate(180deg); }
+
+/* Slide 1: only the intro is shown until "Start my profile" */
+.js .join-main.intro-mode .jsteps-nav,
+.js .join-main.intro-mode .join-form,
+.js .join-main.intro-mode .join-draft { display: none; }
+.js .join-main.intro-mode .join-intro { animation: rise .6s var(--ease) both; }
+
+/* After starting: a compact header with a "Show details" toggle */
+.join-intro.is-collapsed .ji-cta { display: none; }
+.join-intro.is-collapsed .ji-toggle { display: inline-flex; }
+.join-intro.is-collapsed:not(.is-open) .jc-body > :not(.jc-brand):not(h1):not(.ji-toggle),
+.join-intro.is-collapsed:not(.is-open) .jc-cover,
+.join-intro.is-collapsed:not(.is-open) .join-head > :not(h1):not(.ji-toggle) { display: none; }
+.join-intro.is-collapsed .join-campaign { margin-bottom: 18px; }
+.join-intro.is-collapsed .jc-body { padding: 16px 20px; }
+.join-intro.is-collapsed h1 { font-size: clamp(1.3rem, 1.1rem + 1vw, 1.8rem); }
+.join-intro.is-collapsed .join-head { margin-bottom: 18px; }
+
+/* WhatsApp field */
+.wa-group .prefix { color: #1F9D60; font-size: 18px; }
+.wa-group .input { padding-left: 42px; }
+
+/* Currency picker next to the fee range */
+.fee-cur { min-width: 150px; }
+@media (max-width: 560px) { .fee-head { flex-direction: column; align-items: stretch; } .fee-cur .pick-sm, .fee-cur .pick-sm .pick-btn { width: 100%; } }
+
+/* Optional uploads */
+.file-drop { position: relative; display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; border: 1.5px dashed var(--line-strong); background: var(--bg); cursor: pointer; transition: border-color .2s, background-color .2s; }
+.file-drop:hover { border-color: var(--red); }
+.file-drop:focus-within { outline: 2.5px solid var(--red); outline-offset: 3px; }
+.file-drop input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.fd-ic { width: 52px; height: 52px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--surface-2); color: var(--red); font-size: 22px; overflow: hidden; }
+.fd-ic img { width: 100%; height: 100%; object-fit: cover; }
+.fd-txt { display: grid; gap: 2px; min-width: 0; }
+.fd-txt b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fd-txt small { font-size: 13px; color: var(--muted); line-height: 1.4; }
+.fd-btn { margin-left: auto; flex: none; padding: 8px 14px; border-radius: var(--r-pill); border: 1.5px solid var(--line-strong); font-size: 13.5px; font-weight: 700; background: var(--surface); }
+.file-drop.has-file { border-style: solid; border-color: #1F9D60; }
+.file-drop.has-file .fd-btn { background: #1F9D60; border-color: #1F9D60; color: #fff; }
+.field.has-error .file-drop { border-color: #C42D1D; }
+
+/* Profile photo on phones: stacked, large tap target */
+.dz-phone { display: none; }
+@media (max-width: 560px) {
+  /* Compact row: small photo circle, short text, nothing oversized */
+  .dropzone { flex-direction: row; text-align: left; gap: 12px; padding: 12px; margin-bottom: 16px; border-width: 1.5px; }
+  .dz-preview { width: 56px; height: 56px; font-size: 22px; }
+  .dz-badge { display: none; }
+  .dz-desk { display: none; }
+  .dz-phone { display: inline; }
+  .dz-text b { font-size: 15px; }
+  .dz-text small { font-size: 12.5px; margin-top: 2px; }
+  .fd-btn { display: none; }
+  .fd-ic { width: 44px; height: 44px; font-size: 20px; }
+}
+
+/* Thank you: join the broadcast channel */
+.broadcast-card { max-width: 520px; margin: 28px auto 0; padding: 24px; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-md); text-align: left; }
+.bc-step { display: inline-block; font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-text); }
+.broadcast-card h2 { font-size: clamp(1.4rem, 1.2rem + 1vw, 1.9rem); margin-top: 6px; }
+.broadcast-card p { margin-top: 8px !important; color: var(--text-2); }
+.bc-btns { display: grid; gap: 10px; margin-top: 18px; }
+.bc-btns .btn { justify-content: flex-start; }
+.bc-btns .btn i { font-size: 22px; }
+.bc-wa { --btn-bg: #1F9D60; --btn-fg: #fff; }
+.bc-wa:hover { --btn-bg: #18804e; }
+.bc-ig { --btn-bg: var(--ink-900); --btn-fg: #fff; }
+.bc-tg { --btn-bg: #2A8BD0; --btn-fg: #fff; }
+
+/* Phones: tighter corners on the form and its blocks */
+@media (max-width: 640px) {
+  .join-form, .join-campaign, .jp-card, .broadcast-card { border-radius: 16px; }
+  .join-form { padding: 18px 14px; }
+  .dropzone, .file-drop, .fee-box, .channel, .channel-toggle, .audience-box, .rate-card, .review, .pay-note, .reach-bar, .smart-link, .toggle-row { border-radius: 12px; }
+}

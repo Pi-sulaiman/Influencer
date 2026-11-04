@@ -501,3 +501,9 @@ p { margin: 0; }
 .li-actions { display: flex; gap: 4px; }
 .logo-add { border-top: 1px solid var(--line); padding-top: 16px; }
 .logo-add h3 { font-size: 15px; margin-bottom: 12px; }
+
+/* Creator uploads (insights screenshot, rate card) */
+.upload-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.upload-thumbs a { display: grid; gap: 6px; font-size: 13px; font-weight: 700; color: var(--text-2); }
+.upload-thumbs img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); }
+.upload-thumbs a:hover img { border-color: var(--red); }

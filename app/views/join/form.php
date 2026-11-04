@@ -12,6 +12,7 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
 <section class="join">
     <div class="container join-grid">
         <div class="join-main">
+            <div class="join-intro" data-join-intro>
             <?php if ($campaign): ?>
                 <header class="join-campaign" data-reveal>
                     <?php if ($campaign['cover_image']): ?><img class="jc-cover" src="<?= e(upload_url($campaign['cover_image'])) ?>" alt="" width="1200" height="400"><?php endif; ?>
@@ -31,6 +32,7 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                                 <ul class="check-list"><?php foreach (preg_split('/\r?\n/', $campaign['deliverables']) as $line): if (trim($line) === '') continue; ?><li><i class="ph-fill ph-check-circle"></i><?= e(trim($line, " -•\t")) ?></li><?php endforeach; ?></ul>
                             </details>
                         <?php endif; ?>
+                        <?php partial('join_intro_cta'); ?>
                     </div>
                 </header>
             <?php else: ?>
@@ -43,8 +45,10 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                         <li><i class="ph-bold ph-hand-coins"></i>You set your rates</li>
                         <li><i class="ph-bold ph-lock-simple"></i>Private until you apply</li>
                     </ul>
+                    <?php partial('join_intro_cta'); ?>
                 </header>
             <?php endif; ?>
+            </div>
 
             <?php if ($errors): ?>
                 <div class="alert alert-error" role="alert" style="margin-bottom:20px" data-join-errors>
@@ -79,7 +83,7 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                         <label class="dropzone" data-dropzone>
                             <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" data-photo-input<?= $inv('photo') ?>>
                             <span class="dz-preview" data-photo-preview><i class="ph-bold ph-user"></i></span>
-                            <span class="dz-text"><b>Drop a photo here or <u>browse</u></b><small>A clear, recent photo of your face. JPG, PNG or WEBP up to <?= (int) cfg('upload_max_mb', 5) ?> MB.</small></span>
+                            <span class="dz-text"><b><span class="dz-desk">Drop a photo here or <u>browse</u></span><span class="dz-phone">Tap to add your photo</span></b><small>A clear, recent photo of your face. JPG, PNG or WEBP up to <?= (int) cfg('upload_max_mb', 5) ?> MB.</small></span>
                             <span class="dz-badge" aria-hidden="true"><i class="ph-bold ph-camera-plus"></i></span>
                         </label>
                         <?= $err('photo') ?>
@@ -100,8 +104,9 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                             <?= $err('email') ?>
                         </div>
                         <div class="field<?= $has('phone') ?>">
-                            <label for="j-phone">Phone or WhatsApp <span class="opt">(optional)</span></label>
-                            <input class="input" id="j-phone" name="phone" value="<?= e($data['phone']) ?>" autocomplete="tel" inputmode="tel" placeholder="+91 98765 43210"<?= $inv('phone') ?>>
+                            <label for="j-phone">WhatsApp number</label>
+                            <div class="input-group wa-group"><span class="prefix"><i class="ph-fill ph-whatsapp-logo" aria-hidden="true"></i></span><input class="input" id="j-phone" name="phone" type="tel" value="<?= e($data['phone']) ?>" autocomplete="tel" inputmode="tel" placeholder="+91 98765 43210" required<?= $inv('phone') ?>></div>
+                            <p class="field-help">Include your country code. We send campaign briefs here.</p>
                             <?= $err('phone') ?>
                         </div>
                         <div class="field">
@@ -110,13 +115,15 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                         </div>
                         <div class="field<?= $has('country') ?>">
                             <label for="j-country">Country</label>
-                            <input class="input" id="j-country" name="country" value="<?= e($data['country']) ?>" list="countries" autocomplete="country-name" required data-preview="country"<?= $inv('country') ?>>
-                            <datalist id="countries"><?php foreach (country_options() as $c): ?><option value="<?= e($c) ?>"><?php endforeach; ?></datalist>
+                            <select class="select" id="j-country" name="country" required data-picker data-picker-search data-picker-placeholder="Search countries" data-preview="country" data-country<?= $inv('country') ?>>
+                                <option value="" data-placeholder<?= $data['country'] === '' ? ' selected' : '' ?>>Choose your country</option>
+                                <?= country_options_html($data['country']) ?>
+                            </select>
                             <?= $err('country') ?>
                         </div>
                         <div class="field">
                             <label for="j-gender">Gender <span class="opt">(optional)</span></label>
-                            <select class="select" id="j-gender" name="gender">
+                            <select class="select" id="j-gender" name="gender" data-picker>
                                 <?php foreach (['' => 'Prefer not to say', 'Female' => 'Female', 'Male' => 'Male', 'Non-binary' => 'Non-binary', 'Other' => 'Other'] as $v => $l): ?>
                                     <option value="<?= e($v) ?>"<?= $data['gender'] === $v ? ' selected' : '' ?>><?= e($l) ?></option>
                                 <?php endforeach; ?>
@@ -124,7 +131,10 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                         </div>
                         <div class="field">
                             <label for="j-lang">Languages you create in <span class="opt">(optional)</span></label>
-                            <input class="input" id="j-lang" name="languages" value="<?= e($data['languages']) ?>" placeholder="English, Hindi">
+                            <?php $langSel = csv_list($data['languages']); ?>
+                            <select class="select" id="j-lang" name="languages[]" multiple data-picker data-picker-search data-picker-placeholder="Search languages" data-placeholder="Choose languages" data-languages>
+                                <?php foreach (language_options() as $lg): ?><option value="<?= e($lg) ?>"<?= in_array($lg, $langSel, true) ? ' selected' : '' ?>><?= e($lg) ?></option><?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
                 </fieldset>
@@ -174,7 +184,7 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                     <div class="form-grid" style="margin-top:22px">
                         <div class="field">
                             <label for="j-primary">Main platform</label>
-                            <select class="select" id="j-primary" name="primary_platform" data-primary>
+                            <select class="select" id="j-primary" name="primary_platform" data-primary data-picker>
                                 <option value="">Choose your main platform</option>
                                 <?php foreach ($platforms as $key => $p): ?><option value="<?= e($key) ?>"<?= $data['primary_platform'] === $key ? ' selected' : '' ?>><?= e($p['label']) ?></option><?php endforeach; ?>
                             </select>
@@ -192,6 +202,16 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                             <label for="j-web">Website or media kit link <span class="opt">(optional)</span></label>
                             <input class="input" id="j-web" name="website" value="<?= e($data['website']) ?>" type="url" inputmode="url" placeholder="https://">
                         </div>
+                    </div>
+                    <div class="field<?= $has('insights_image') ?>" style="margin-top:18px">
+                        <span class="label">Insights screenshot <span class="opt">(optional, gets you verified faster)</span></span>
+                        <label class="file-drop" data-file-drop>
+                            <input type="file" name="insights_image" accept="image/jpeg,image/png,image/webp" data-file-input>
+                            <span class="fd-ic"><i class="ph-bold ph-chart-bar" aria-hidden="true"></i></span>
+                            <span class="fd-txt"><b data-file-name>Upload a screenshot of your insights</b><small>Your app's audience or account insights page, showing followers and reach.</small></span>
+                            <span class="fd-btn" aria-hidden="true">Choose</span>
+                        </label>
+                        <?= $err('insights_image') ?>
                     </div>
                     <div class="reach-bar js-only" data-reach-bar aria-live="polite">
                         <div><span>Total followers</span><b data-total-followers>0</b></div>
@@ -226,7 +246,10 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                         <div class="form-grid">
                             <div class="field full">
                                 <label for="j-acountry">Where most of your audience lives</label>
-                                <input class="input" id="j-acountry" name="audience_country" value="<?= e($data['audience_country']) ?>" list="countries" placeholder="e.g. India">
+                                <select class="select" id="j-acountry" name="audience_country" data-picker data-picker-search data-picker-placeholder="Search countries">
+                                    <option value="" data-placeholder<?= $data['audience_country'] === '' ? ' selected' : '' ?>>Choose a country</option>
+                                    <?= country_options_html($data['audience_country'], true, ['Worldwide' => ['Worldwide, no single country', 'Spread across many countries']]) ?>
+                                </select>
                             </div>
                             <div class="field">
                                 <span class="label">Main age group</span>
@@ -269,10 +292,10 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                                 <span class="label">Fee range per deliverable</span>
                                 <p class="field-help">What you usually charge for one sponsored post or video, from simplest to most involved.</p>
                             </div>
-                            <div class="field" style="min-width:120px">
+                            <div class="field fee-cur">
                                 <label class="sr-only" for="j-cur">Currency</label>
-                                <select class="select" id="j-cur" name="currency" data-currency>
-                                    <?php foreach ($currencies as $code => $s): ?><option value="<?= e($code) ?>" data-symbol="<?= e($s) ?>"<?= $data['currency'] === $code ? ' selected' : '' ?>><?= e($code) ?></option><?php endforeach; ?>
+                                <select class="select pick-sm" id="j-cur" name="currency" data-currency data-picker data-picker-search data-picker-placeholder="Search currencies" data-picker-title="Currency">
+                                    <?= currency_options_html($data['currency']) ?>
                                 </select>
                             </div>
                         </div>
@@ -306,6 +329,17 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                             <?php endforeach; ?>
                         </div>
                     </details>
+
+                    <div class="field<?= $has('rate_card_image') ?>" style="margin-top:16px">
+                        <span class="label">Rate card image <span class="opt">(optional)</span></span>
+                        <label class="file-drop" data-file-drop>
+                            <input type="file" name="rate_card_image" accept="image/jpeg,image/png,image/webp" data-file-input>
+                            <span class="fd-ic"><i class="ph-bold ph-file-image" aria-hidden="true"></i></span>
+                            <span class="fd-txt"><b data-file-name>Upload your rate card</b><small>Already have one? Add the image. JPG, PNG or WEBP up to <?= (int) cfg('upload_max_mb', 5) ?> MB.</small></span>
+                            <span class="fd-btn" aria-hidden="true">Choose</span>
+                        </label>
+                        <?= $err('rate_card_image') ?>
+                    </div>
 
                     <div class="form-grid" style="margin-top:20px">
                         <div class="field full">

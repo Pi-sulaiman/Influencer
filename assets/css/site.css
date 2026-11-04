@@ -185,11 +185,13 @@ ul, ol { margin: 0; padding: 0; }
 [data-theme="dark"] .theme-toggle .ph-sun { display: block; }
 [data-theme="dark"] .theme-toggle .ph-moon { display: none; }
 .nav-burger { display: none; }
-.nav-burger span { display: block; width: 20px; height: 2px; background: currentColor; border-radius: 2px; transition: transform .35s var(--ease), opacity .2s; }
-.nav-burger span + span { margin-top: 5px; }
-.nav-burger[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.nav-burger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
-.nav-burger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+/* Only the three inner lines are styled; the wrapper span must not rotate, or the X breaks. */
+.nav-burger > span { display: block; width: 20px; }
+.nav-burger > span > span { display: block; width: 20px; height: 2px; background: currentColor; border-radius: 2px; transition: transform .35s var(--ease), opacity .2s; }
+.nav-burger > span > span + span { margin-top: 5px; }
+.nav-burger[aria-expanded="true"] > span > span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-burger[aria-expanded="true"] > span > span:nth-child(2) { opacity: 0; }
+.nav-burger[aria-expanded="true"] > span > span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
 .mobile-menu { position: fixed; inset: var(--nav-h) 0 0 0; z-index: 20; background: var(--bg); padding: 24px var(--gutter) 40px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity .3s var(--ease), transform .4s var(--ease); }
 .mobile-menu.is-open { opacity: 1; transform: none; pointer-events: auto; }
