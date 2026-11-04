@@ -1,0 +1,25 @@
+# Local development overrides & SQLite
+config.local.php
+storage/database.sqlite*
+storage/installed.lock
+
+# Uploads - keep directories, ignore uploaded media
+uploads/blog/*
+!uploads/blog/.gitkeep
+uploads/campaigns/*
+!uploads/campaigns/.gitkeep
+uploads/creators/*
+!uploads/creators/.gitkeep
+uploads/site/*
+!uploads/site/.gitkeep
+uploads/testimonials/*
+!uploads/testimonials/.gitkeep
+
+# IDE and tool files
+.claude/
+.gemini/
+.idea/
+.vscode/
+*.log
+.DS_Store
+Thumbs.db
