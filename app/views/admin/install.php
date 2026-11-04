@@ -1,4 +1,4 @@
-<?php /** @var array $checks @var string $dbError @var array $errors */
+<?php /** @var array $checks @var string $dbError @var array|null $dbHelp @var bool $folderHelp @var array $errors */
 $allOk = !in_array(false, $checks, true);
 ?><!doctype html>
 <html lang="en">
@@ -34,7 +34,30 @@ $allOk = !in_array(false, $checks, true);
                 <?php endforeach; ?>
             </ul>
             <?php if ($dbError): ?>
-                <div class="alert alert-error"><i class="ph-fill ph-warning-circle"></i><div>Database connection failed. Check the 'db' block in config.php.<br><small><?= e($dbError) ?></small></div></div>
+                <div class="install-help">
+                    <p class="ih-title"><i class="ph-fill ph-warning-circle"></i><?= e($dbHelp['title'] ?? 'Database connection failed.') ?></p>
+                    <ol>
+                        <?php foreach (($dbHelp['steps'] ?? []) as $step): ?><li><?= e($step) ?></li><?php endforeach; ?>
+                    </ol>
+                    <pre class="ih-code">'db' => [
+    'driver' => 'mysql',
+    'host'   => 'localhost',
+    'name'   => 'abcd1234_peakilo', // DB name
+    'user'   => 'abcd1234_peakilo', // DB user
+    'pass'   => 'your-db-password',
+],</pre>
+                    <details><summary>Technical message</summary><small><?= e($dbError) ?></small></details>
+                </div>
+            <?php endif; ?>
+            <?php if ($folderHelp): ?>
+                <div class="install-help">
+                    <p class="ih-title"><i class="ph-fill ph-folder-notch-open"></i>A folder is not writable.</p>
+                    <ol>
+                        <li>In cPanel File Manager, open the folder where Peakilo is installed.</li>
+                        <li>If <b>uploads</b> or <b>storage</b> is missing, click <b>+ Folder</b> and create it.</li>
+                        <li>Right-click the folder, choose <b>Change Permissions</b>, set it to <b>755</b> (or <b>775</b> if it still fails), then refresh this page.</li>
+                    </ol>
+                </div>
             <?php endif; ?>
             <?php if (!empty($errors['db'])): ?><div class="alert alert-error"><i class="ph-fill ph-warning-circle"></i><?= e($errors['db']) ?></div><?php endif; ?>
             <div class="field<?= isset($errors['name']) ? ' has-error' : '' ?>">

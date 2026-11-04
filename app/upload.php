@@ -51,6 +51,7 @@ function save_image_upload(array $file, $folder, $maxSize = 1200)
         }
     }
 
+    ensure_upload_protection();
     $folder = preg_replace('/[^a-z0-9_-]/', '', $folder);
     $dir = ROOT . '/uploads/' . $folder . '/' . date('Y/m');
     if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
@@ -123,6 +124,25 @@ function gd_resize($tmp, array $info, $targetNoExt, $maxSize)
     imagedestroy($dst);
     @chmod($path, 0644);
     return $path;
+}
+
+/**
+ * Makes sure uploads/.htaccess exists so nothing uploaded can run as a script.
+ * A deploy that skips the uploads folder would otherwise leave it unprotected.
+ */
+function ensure_upload_protection()
+{
+    $dir = ROOT . '/uploads';
+    $file = $dir . '/.htaccess';
+    if (is_file($file) || !is_dir($dir) || !is_writable($dir)) {
+        return;
+    }
+    @file_put_contents($file, "# Uploaded files are served as static images only. Never run scripts here.\n"
+        . "Options -Indexes -ExecCGI\n"
+        . "<FilesMatch \"(?i)\\.(php\\d?|phtml|phar|pl|py|cgi|sh|asp|aspx|jsp|shtml|htaccess)$\">\n"
+        . "    <IfModule mod_authz_core.c>\n        Require all denied\n    </IfModule>\n"
+        . "    <IfModule !mod_authz_core.c>\n        Order allow,deny\n        Deny from all\n    </IfModule>\n"
+        . "</FilesMatch>\n");
 }
 
 function delete_upload($relative)
