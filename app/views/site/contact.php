@@ -59,7 +59,7 @@ $isBrand = $data['inquiry_type'] === 'brand';
                             <?php foreach ($picked as $c): ?>
                                 <li data-picked-item="<?= e($c['code']) ?>">
                                     <input type="hidden" name="creators[]" value="<?= e($c['code']) ?>">
-                                    <img src="<?= e($c['photo']) ?>" alt="" width="44" height="44" loading="lazy">
+                                    <img src="<?= e($c['photo']) ?>" alt="" width="44" height="44" loading="lazy"<?= photo_fallback_attr($c) ?>>
                                     <span><b><?= e($c['name']) ?></b><small><?= e($c['niches'][0] ?? 'Creator') ?> &middot; <?= e(short_number($c['reach'])) ?> followers</small></span>
                                     <button type="button" class="icon-btn" data-unpick="<?= e($c['code']) ?>" aria-label="Remove <?= e($c['name']) ?> from this request"><i class="ph-bold ph-x"></i></button>
                                 </li>

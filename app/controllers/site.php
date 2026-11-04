@@ -26,7 +26,7 @@ function site_home()
     $liveCounts = stats_mode() === 'live';
     $counts = $liveCounts ? niche_counts() : [];
     $approved = display_creator_total();
-    $reach = (int) val("SELECT SUM(total_followers) FROM influencers WHERE status = 'approved'");
+    $reach = (int) val("SELECT SUM(total_followers) FROM influencers WHERE status = 'approved' AND is_demo = 0");
 
     $faqs = home_faqs();
     render('site/home', [
@@ -38,6 +38,7 @@ function site_home()
         'networkReach' => $reach,
         'faqs' => $faqs,
         'testimonials' => site_testimonials(), // managed in Admin > Site content; hidden when empty
+        'logos' => site_brand_logos(),         // brand carousel, also hidden when empty
         'stats' => site_stats(),
     ], [
         'raw_title' => 'Peakilo | Influencer Marketing Agency for Brands and Creators',
@@ -219,7 +220,7 @@ function site_contact()
     // Anonymous niche/platform pairs of approved creators, for the live match counter.
     $pool = [];
     $liveCounts = stats_mode() === 'live';
-    foreach (all("SELECT niches, instagram, youtube, tiktok, facebook, x FROM influencers WHERE status = 'approved'") as $r) {
+    foreach (all("SELECT niches, instagram, youtube, tiktok, facebook, x FROM influencers WHERE status = 'approved' AND is_demo = 0") as $r) {
         $pl = [];
         foreach (array_keys(platform_options()) as $p) if (!empty($r[$p])) $pl[] = $p;
         $pool[] = [csv_list($r['niches']), $pl];

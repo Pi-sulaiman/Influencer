@@ -1,4 +1,4 @@
-<?php /** @var array $live @var array $testimonials @var array|null $editing @var array $slots */
+<?php /** @var array $live @var array $logos @var array $testimonials @var array|null $editing @var array $slots */
 $t = $editing ?: ['id' => '', 'name' => '', 'role' => '', 'quote' => '', 'photo' => '', 'sort_order' => count($testimonials), 'is_visible' => 1];
 $liveReach = $live['reach'] >= 1000000 ? round($live['reach'] / 1000000, 1) . 'M' : short_number($live['reach']);
 ?>
@@ -14,9 +14,10 @@ $liveReach = $live['reach'] >= 1000000 ? round($live['reach'] / 1000000, 1) . 'M
             <?= csrf_field() ?><input type="hidden" name="action" value="stats">
             <div class="card-head"><h2>Homepage numbers</h2><span class="small muted">Shown on the homepage and About page</span></div>
             <div class="card-body">
+                <?php if (demo_on()): ?><div class="alert alert-info"><i class="ph-fill ph-flask"></i><span>Demo mode is on, so the website shows example numbers. These settings apply once you turn demo mode off in <a href="<?= e(url('admin/settings#demo')) ?>">Settings</a>.</span></div><?php endif; ?>
                 <div class="mode-cards" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:18px">
-                    <label class="mode-card"><input type="radio" name="stats_mode" value="custom"<?= stats_mode() === 'custom' ? ' checked' : '' ?>><span><i class="ph-bold ph-pencil-simple-line"></i><b>Custom numbers</b><small>Shows the figures you type below, with a "+" (for example 1,200+). Per-niche counts are hidden. Good while the network is growing.</small></span></label>
-                    <label class="mode-card"><input type="radio" name="stats_mode" value="live"<?= stats_mode() === 'live' ? ' checked' : '' ?>><span><i class="ph-bold ph-database"></i><b>Live from database</b><small>Counts approved creators (<?= (int) $live['creators'] ?> now), closed campaigns (<?= (int) $live['campaigns'] ?>) and combined followers (<?= e($liveReach) ?>). Niche counts show everywhere.</small></span></label>
+                    <label class="mode-card"><input type="radio" name="stats_mode" value="custom"<?= setting('stats_mode', 'live') === 'custom' ? ' checked' : '' ?>><span><i class="ph-bold ph-pencil-simple-line"></i><b>Custom numbers</b><small>Shows the figures you type below, with a "+" (for example 1,200+). Per-niche counts are hidden. Good while the network is growing.</small></span></label>
+                    <label class="mode-card"><input type="radio" name="stats_mode" value="live"<?= setting('stats_mode', 'live') !== 'custom' ? ' checked' : '' ?>><span><i class="ph-bold ph-database"></i><b>Live from database</b><small>Counts approved creators (<?= (int) $live['creators'] ?> now), closed campaigns (<?= (int) $live['campaigns'] ?>) and combined followers (<?= e($liveReach) ?>). Niche counts show everywhere.</small></span></label>
                 </div>
                 <div class="form-grid">
                     <div class="field">
@@ -72,6 +73,44 @@ $liveReach = $live['reach'] >= 1000000 ? round($live['reach'] / 1000000, 1) . 'M
                     </tbody>
                 </table></div>
             <?php endif; ?>
+        </section>
+
+        <!-- Brand logos -->
+        <section class="card" id="logos">
+            <div class="card-head"><h2>Brand logos</h2><span class="small muted"><?= count($logos) ?> saved &middot; homepage carousel</span></div>
+            <div class="card-body">
+                <p class="small muted" style="margin-bottom:14px">Logos scroll in an endless grayscale strip under the homepage hero and turn colour on hover. The strip stays hidden until you add one. Only add brands you have really run campaigns with: a "worked with" claim for any other brand is false advertising and can break trademark rules.</p>
+                <form class="logo-title-form" method="post" action="<?= e(url('admin/content')) ?>">
+                    <?= csrf_field() ?><input type="hidden" name="action" value="logos_title">
+                    <div class="field" style="flex:1"><label for="lt">Strip title</label><input class="input" id="lt" name="logos_title" value="<?= e(setting('logos_title', 'Brands we have worked with')) ?>" maxlength="120"></div>
+                    <button class="btn btn-outline" type="submit">Save title</button>
+                </form>
+                <?php if ($logos): ?>
+                    <div class="logo-grid">
+                        <?php foreach ($logos as $l): ?>
+                            <div class="logo-item<?= $l['is_visible'] ? '' : ' is-hidden' ?>">
+                                <div class="li-img"><img src="<?= e(upload_url($l['logo'])) ?>" alt="<?= e($l['name']) ?>" loading="lazy"></div>
+                                <div class="li-meta"><b><?= e($l['name']) ?></b><small>Order <?= (int) $l['sort_order'] ?><?= $l['is_visible'] ? '' : ' &middot; hidden' ?></small></div>
+                                <div class="li-actions">
+                                    <form method="post" action="<?= e(url('admin/content')) ?>"><?= csrf_field() ?><input type="hidden" name="action" value="logo_toggle"><input type="hidden" name="id" value="<?= (int) $l['id'] ?>"><button class="btn btn-ghost btn-sm" type="submit"><?= $l['is_visible'] ? 'Hide' : 'Show' ?></button></form>
+                                    <form method="post" action="<?= e(url('admin/content')) ?>" data-confirm="Remove the <?= e($l['name']) ?> logo?"><?= csrf_field() ?><input type="hidden" name="action" value="logo_delete"><input type="hidden" name="id" value="<?= (int) $l['id'] ?>"><button class="btn btn-ghost btn-sm" type="submit" aria-label="Delete"><i class="ph ph-trash"></i></button></form>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+                <form class="logo-add" method="post" action="<?= e(url('admin/content')) ?>" enctype="multipart/form-data">
+                    <?= csrf_field() ?><input type="hidden" name="action" value="logo">
+                    <h3>Add a brand</h3>
+                    <div class="form-grid">
+                        <div class="field"><label for="lg-name">Brand name</label><input class="input" id="lg-name" name="name" required maxlength="160" placeholder="e.g. Brand you ran a campaign for"></div>
+                        <div class="field"><label for="lg-file">Logo file</label><input class="input" id="lg-file" type="file" name="logo" accept=".svg,image/svg+xml,image/png,image/webp,image/jpeg" required><span class="hint">SVG works best (cleaned automatically). PNG or WEBP with a transparent background also works.</span></div>
+                        <div class="field"><label for="lg-url">Link <span class="muted">(optional)</span></label><input class="input" id="lg-url" name="url" placeholder="https://"></div>
+                        <div class="field"><label for="lg-order">Order</label><input class="input" id="lg-order" name="sort_order" type="number" value="<?= count($logos) ?>"></div>
+                    </div>
+                    <button class="btn btn-primary mt-16" type="submit"><i class="ph ph-plus"></i>Add logo</button>
+                </form>
+            </div>
         </section>
 
         <!-- Page photos -->

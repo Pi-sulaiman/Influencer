@@ -469,3 +469,35 @@ p { margin: 0; }
 
 /* Grid children may shrink, so wide tables scroll inside their card. */
 .grid > * { min-width: 0; }
+
+/* Demo mode */
+.demo-card { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; padding: 20px 22px; margin-bottom: 20px; }
+.demo-card.is-on { border-color: #F5C06B; background: #FFFBF0; }
+[data-theme="dark"] .demo-card.is-on { background: rgba(245, 192, 107, .08); }
+.demo-main { display: flex; gap: 14px; align-items: flex-start; flex: 1 1 420px; }
+.demo-main h2 { font-size: 17px; display: flex; gap: 8px; align-items: center; }
+.demo-main p { color: var(--muted); font-size: 14px; margin-top: 4px; max-width: 70ch; }
+.demo-ic { width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; background: #F5C06B; color: #3A2A00; font-size: 22px; }
+.demo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.demo-strip { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 18px; border-radius: 12px; background: #FFF4D6; color: #5C4300; font-size: 14px; border: 1px solid #F5DB9C; }
+.demo-strip i { font-size: 18px; }
+.demo-strip a { margin-left: auto; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.photo-change { margin-top: 10px; }
+.photo-change .btn { cursor: pointer; }
+.demo-people { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.demo-people a { display: block; width: 40px; height: 40px; border-radius: 10px; overflow: hidden; background: var(--surface-2); outline-offset: 2px; }
+.demo-people a:hover { outline: 2px solid var(--red); }
+.demo-people img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Brand logos */
+.logo-title-form { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 16px; }
+.logo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 18px; }
+.logo-item { border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 8px; }
+.logo-item.is-hidden { opacity: .55; }
+.li-img { height: 64px; display: grid; place-items: center; background: var(--surface-2); border-radius: 10px; padding: 10px; }
+.li-img img { max-height: 44px; max-width: 100%; object-fit: contain; filter: grayscale(1); }
+.li-meta { display: grid; line-height: 1.3; }
+.li-meta small { color: var(--muted); }
+.li-actions { display: flex; gap: 4px; }
+.logo-add { border-top: 1px solid var(--line); padding-top: 16px; }
+.logo-add h3 { font-size: 15px; margin-bottom: 12px; }

@@ -37,9 +37,10 @@ Plain PHP + MySQL, built for cPanel hosting. No Composer, no Node and no build s
 - **Subscribers**: newsletter sign-ups with CSV export.
 - **Site content**:
   - **Homepage numbers**: shown live from your database by default, or type your own figure to override.
+  - **Brand logos**: upload logos (SVG, cleaned automatically, or PNG/WEBP) for an endless grayscale "Brands we have worked with" strip under the homepage hero. Hidden until you add one. Only add brands you have really worked with.
   - **Testimonials**: add, edit, reorder, hide. The section stays hidden until you add one.
   - **Page photos**: upload your own photo for each of the 8 photo spots on the site.
-- **Settings**: site details, contact info, social links, Google Analytics, Search Console verification, your password and team admins.
+- **Settings**: demo mode on/off, site details, contact info, social links, Google Analytics, Search Console verification, your password and team admins.
 
 ## Run it locally (XAMPP)
 
@@ -52,7 +53,7 @@ D:\xampp\php\php.exe -S 127.0.0.1:8090 index.php
 
 Open http://127.0.0.1:8090. The local test admin login is written in `config.local.php`.
 
-The local SQLite database contains **test influencers** (emails ending in `@example.test`, source `local-test`) so you can see the creator wall and admin screens filled. They exist only in `storage/database.sqlite` and are never uploaded.
+The local SQLite database is never uploaded. Demo mode (see below) fills the site with 48 sample creators so you can see the creator wall and roster filled.
 
 To test against XAMPP MySQL instead, delete `config.local.php`, put your local MySQL details in `config.php`, then visit `/install`.
 
@@ -83,8 +84,19 @@ That is expected until the installer has run. If the installer shows **Database 
 
 The GitHub deploy never uploads `config.php`, so your edits on the server are kept. If your FTP account does not open straight into the website folder, add a repository variable `FTP_SERVER_DIR` (for example `./public_html/`). Deploys can also be started by hand from the Actions tab (Run workflow).
 
+## Demo mode
+
+A new site starts in **demo mode** so it does not look empty while your network grows:
+
+- 48 **sample creators** appear on the homepage, in Find talent and on profile pages. They use neutral channel names (for example GlowDiaries), mock portraits from the placeholder service pravatar.cc, and always carry a **Sample** label with no "vetted" badge. If a portrait cannot load, an illustrated avatar from `assets/img/demo/` is shown instead.
+- The homepage shows **example numbers**: 1,200+ creators, 340+ campaigns, 85M+ reach, 92% repeat brands.
+- Sample creators never appear in your admin lists, dashboard or CSV export. If a brand includes one in a quote request, the message marks it "Sample (demo)".
+
+Turn it off in **Admin > Settings > Demo mode > Turn demo off**. The website then shows only real approved creators who allowed featuring, and real numbers (zeros are hidden). You can turn it back on at any time, or **Delete sample creators** for good. Click a sample creator in that panel to upload your own mock photo for it.
+
 ## Before you launch
 
+- **Demo mode:** turn it off once you have real approved creators (Admin > Settings).
 - **Testimonials:** add real quotes (with permission) in Admin > Site content. The section is hidden until you do.
 - **Homepage numbers:** these use live figures by default:
   - approved creators

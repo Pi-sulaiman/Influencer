@@ -19,8 +19,15 @@ $tier = creator_tier($inf['total_followers']);
 <div class="grid grid-side">
     <div class="grid">
         <section class="card profile-hero">
-            <div class="profile-photo">
-                <?php if ($inf['photo']): ?><a href="<?= e(upload_url($inf['photo'])) ?>" target="_blank" rel="noopener" style="display:contents"><img src="<?= e(upload_url($inf['photo'])) ?>" alt="<?= e($inf['full_name']) ?>"></a><?php else: ?><?= e(initials($inf['full_name'])) ?><?php endif; ?>
+            <div>
+                <div class="profile-photo">
+                    <?php if ($inf['photo']): ?><a href="<?= e(upload_url($inf['photo'])) ?>" target="_blank" rel="noopener" style="display:contents"><img src="<?= e(upload_url($inf['photo'])) ?>" alt="<?= e($inf['full_name']) ?>"<?= !empty($inf['is_demo']) ? ' onerror="this.onerror=null;this.src=\'' . e(demo_fallback_photo($inf['id'])) . '\'"' : '' ?>></a><?php else: ?><?= e(initials($inf['full_name'])) ?><?php endif; ?>
+                </div>
+                <form class="photo-change" method="post" action="<?= e(url('admin/influencers/' . $inf['id'])) ?>" enctype="multipart/form-data">
+                    <?= csrf_field() ?><input type="hidden" name="action" value="photo">
+                    <label class="btn btn-ghost btn-sm"><i class="ph ph-camera"></i>Change photo<input class="sr-only" type="file" name="photo" accept="image/jpeg,image/png,image/webp" onchange="this.form.submit()"></label>
+                </form>
+                <?php if (!empty($inf['is_demo'])): ?><p class="small muted" style="max-width:220px;margin-top:6px"><span class="badge b-on_hold">Sample (demo)</span> Shown on the website only while demo mode is on.</p><?php endif; ?>
             </div>
             <div>
                 <div class="flex" style="flex-wrap:wrap">

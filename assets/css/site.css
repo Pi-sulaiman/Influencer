@@ -935,3 +935,23 @@ body.has-sl-tray .footer { padding-bottom: 90px; }
 .toast.is-on { opacity: 1; }
 body.has-sl-tray .toast { bottom: 92px; }
 @media (max-width: 420px) { .jnav-count { display: none; } }
+
+/* Demo mode: sample profiles are always labelled */
+.tc-sample { position: absolute; left: 12px; top: 44px; padding: 4px 10px; border-radius: var(--r-pill); background: rgba(255, 253, 251, .92); color: var(--ink-900); font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.sample-note { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; padding: 12px 16px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); font-size: 14.5px; color: var(--text-2); }
+.sample-note i { color: var(--red); font-size: 18px; margin-top: 2px; }
+
+/* Brand logo carousel: endless, grayscale, colour on hover */
+.logos { padding: clamp(28px, 4vw, 44px) 0 8px; }
+.logos-title { text-align: center; font-size: 13px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 22px; }
+.logo-marquee { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+.logo-track { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: clamp(40px, 6vw, 80px); width: max-content; animation: logo-scroll var(--logo-dur, 40s) linear infinite; }
+.logo-marquee:hover .logo-track, .logo-marquee:focus-within .logo-track { animation-play-state: paused; }
+.logo-track li { flex: none; }
+.logo-track a { display: block; }
+.logo-track img { height: 40px; width: auto; max-width: 160px; object-fit: contain; filter: grayscale(1) contrast(.9); opacity: .55; transition: filter .35s, opacity .35s, transform .35s var(--ease); }
+.logo-track li:hover img { filter: none; opacity: 1; transform: scale(1.06); }
+[data-theme="dark"] .logo-track img { filter: grayscale(1) brightness(0) invert(1); opacity: .5; }
+[data-theme="dark"] .logo-track li:hover img { filter: grayscale(1) brightness(0) invert(1); opacity: .95; }
+@keyframes logo-scroll { to { transform: translateX(calc(-50% - clamp(20px, 3vw, 40px))); } }
+@media (prefers-reduced-motion: reduce) { .logo-track { animation: none; flex-wrap: wrap; justify-content: center; width: auto; } .logo-track li[aria-hidden="true"] { display: none; } .logo-marquee { -webkit-mask-image: none; mask-image: none; } }

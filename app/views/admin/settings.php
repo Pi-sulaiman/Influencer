@@ -1,5 +1,33 @@
-<?php /** @var array $me @var array $admins @var array $fields */ ?>
+<?php /** @var array $me @var array $admins @var array $fields @var int $demoCount @var array $demoPeople */ $demo = demo_on(); ?>
 <div class="page-head"><div><h2>Settings</h2><p>Site details, contact info, landing page numbers and admin accounts.</p></div></div>
+
+<section class="card demo-card<?= $demo ? ' is-on' : '' ?>" id="demo">
+    <div class="demo-main">
+        <span class="demo-ic"><i class="ph-bold ph-flask"></i></span>
+        <div>
+            <h2>Demo mode <span class="badge <?= $demo ? 'b-new' : 'no-dot' ?>"><?= $demo ? 'On' : 'Off' ?></span></h2>
+            <p><?php if ($demo): ?>The website shows <b><?= (int) $demoCount ?> sample creators</b> (labelled "Sample", with mock photos) and <b>example homepage numbers</b> (1,200+ creators, 340+ campaigns, 85M+ reach, 92%). Your real creators, messages and admin lists are never mixed with them. Turn it off when you have real creators to show.<?php else: ?>The website shows only real data: approved creators who allowed featuring, and live numbers from your database (or the figures you typed in Site content). Zero numbers are hidden.<?php endif; ?></p>
+            <?php if ($demoPeople): ?>
+                <div class="demo-people" aria-label="Sample creators">
+                    <?php foreach ($demoPeople as $dp): ?><a href="<?= e(url('admin/influencers/' . $dp['id'])) ?>" title="<?= e($dp['display_name']) ?>: open to change the photo"><img src="<?= e(upload_url($dp['photo'])) ?>" alt="<?= e($dp['display_name']) ?>" loading="lazy" onerror="this.onerror=null;this.src='<?= e(demo_fallback_photo($dp['id'])) ?>'"></a><?php endforeach; ?>
+                </div>
+                <p class="small muted" style="margin-top:6px">Click a sample creator to upload your own mock photo for it.</p>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="demo-actions">
+        <form method="post" action="<?= e(url('admin/settings')) ?>">
+            <?= csrf_field() ?><input type="hidden" name="section" value="demo"><input type="hidden" name="demo_mode" value="<?= $demo ? '0' : '1' ?>">
+            <button class="btn <?= $demo ? 'btn-dark' : 'btn-primary' ?>" type="submit"><i class="ph-bold <?= $demo ? 'ph-toggle-left' : 'ph-toggle-right' ?>"></i><?= $demo ? 'Turn demo off' : 'Turn demo on' ?></button>
+        </form>
+        <?php if ($demoCount): ?>
+            <form method="post" action="<?= e(url('admin/settings')) ?>" data-confirm="Delete all <?= (int) $demoCount ?> sample creators for good? Demo mode will be turned off. You can turn it on again later to add them back.">
+                <?= csrf_field() ?><input type="hidden" name="section" value="demo_delete">
+                <button class="btn btn-ghost" type="submit"><i class="ph ph-trash"></i>Delete sample creators</button>
+            </form>
+        <?php endif; ?>
+    </div>
+</section>
 
 <div class="grid grid-side">
     <form method="post" action="<?= e(url('admin/settings')) ?>" class="grid">

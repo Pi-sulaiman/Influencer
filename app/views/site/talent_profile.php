@@ -1,23 +1,26 @@
 <?php
 /** @var array $c (roster_card) @var array $similar */
 $meta = trim(($c['niches'][0] ?? 'Creator') . ' · ' . short_number($c['reach']) . ' followers');
-$slAttrs = 'data-shortlist data-code="' . e($c['code']) . '" data-name="' . e($c['name']) . '" data-photo="' . e($c['photo']) . '" data-meta="' . e($meta) . '"';
+$slAttrs = 'data-shortlist data-code="' . e($c['code']) . '" data-name="' . e($c['name']) . '" data-photo="' . e($c['photo']) . '" data-meta="' . e($meta) . '"' . (!empty($c['demo']) ? ' data-fallback="' . e(demo_fallback_photo($c['id'])) . '"' : '');
 $quote = url('contact?type=brand&creators=' . rawurlencode($c['code']));
 ?>
 <section class="tp">
     <div class="container">
         <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="<?= e(url('')) ?>">Home</a><span aria-hidden="true">/</span><a href="<?= e(url('talent')) ?>">Find talent</a><span aria-hidden="true">/</span><span><?= e($c['name']) ?></span></nav>
 
+        <?php if (!empty($c['demo'])): ?>
+            <p class="sample-note"><i class="ph-bold ph-info"></i>This is a sample profile. It shows what brands see for each creator. Send a brief and we will shortlist real creators for you.</p>
+        <?php endif; ?>
         <div class="tp-grid">
             <div class="tp-media" data-reveal="scale">
-                <img src="<?= e($c['photo']) ?>" alt="<?= e($c['name']) ?>, <?= e($c['niches'][0] ?? 'content') ?> creator" width="600" height="720">
+                <img src="<?= e($c['photo']) ?>" alt="<?= e($c['name']) ?>, <?= e($c['niches'][0] ?? 'content') ?> creator" width="600" height="720"<?= photo_fallback_attr($c) ?>>
                 <span class="tc-tier"><?= e($c['tier']['label']) ?> &middot; <?= e($c['tier']['range']) ?></span>
                 <button type="button" class="tc-save" <?= $slAttrs ?> aria-pressed="false" aria-label="Add <?= e($c['name']) ?> to your shortlist"><i class="ph-bold ph-heart" aria-hidden="true"></i></button>
             </div>
 
             <div class="tp-main">
-                <p class="eyebrow"><?= mark_svg('') ?> <?= e($c['code']) ?> &middot; Vetted by Peakilo</p>
-                <h1 class="h1 tp-name"><?= e($c['name']) ?> <i class="ph-fill ph-seal-check" aria-hidden="true"></i></h1>
+                <p class="eyebrow"><?= mark_svg('') ?> <?= e($c['code']) ?> &middot; <?= !empty($c['demo']) ? 'Sample profile' : 'Vetted by Peakilo' ?></p>
+                <h1 class="h1 tp-name"><?= e($c['name']) ?><?php if (empty($c['demo'])): ?> <i class="ph-fill ph-seal-check" aria-hidden="true"></i><?php endif; ?></h1>
                 <p class="tp-loc">
                     <?php if ($c['city'] || $c['country']): ?><span><i class="ph-bold ph-map-pin"></i><?= e(trim($c['city'] . ', ' . $c['country'], ', ')) ?></span><?php endif; ?>
                     <?php if ($c['languages']): ?><span><i class="ph-bold ph-translate"></i><?= e($c['languages']) ?></span><?php endif; ?>

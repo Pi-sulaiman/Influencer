@@ -41,9 +41,9 @@ function site_image_is_custom($slot)
 function live_stats()
 {
     return [
-        'creators'  => (int) val("SELECT COUNT(*) FROM influencers WHERE status = 'approved'"),
+        'creators'  => (int) val("SELECT COUNT(*) FROM influencers WHERE status = 'approved' AND is_demo = 0"),
         'campaigns' => (int) val("SELECT COUNT(*) FROM campaigns WHERE status = 'closed'"),
-        'reach'     => (int) val("SELECT SUM(total_followers) FROM influencers WHERE status = 'approved'"),
+        'reach'     => (int) val("SELECT SUM(total_followers) FROM influencers WHERE status = 'approved' AND is_demo = 0"),
     ];
 }
 
@@ -53,12 +53,18 @@ function live_stats()
  */
 function stats_mode()
 {
-    return setting('stats_mode', 'custom') === 'live' ? 'live' : 'custom';
+    if (demo_on()) {
+        return 'custom'; // example numbers while demo mode is on
+    }
+    return setting('stats_mode', 'live') === 'custom' ? 'custom' : 'live';
 }
 
 /** Creator total shown in the hero matchmaker and elsewhere. */
 function display_creator_total()
 {
+    if (demo_on()) {
+        return (int) demo_stats()[0]['value'];
+    }
     if (stats_mode() === 'custom') {
         return (int) setting('stat_creators', '0');
     }
@@ -69,6 +75,9 @@ function display_creator_total()
 function site_stats()
 {
     $out = [];
+    if (demo_on()) {
+        return demo_stats();
+    }
     if (stats_mode() === 'custom') {
         $num = function ($key) { return (float) preg_replace('/[^\d.]/', '', (string) setting($key)); };
         $r = $num('stat_reach');
@@ -88,6 +97,19 @@ function site_stats()
         else $out[] = ['value' => $n, 'decimals' => 0, 'suffix' => '', 'label' => 'combined followers across our creators'];
     }
     return array_values(array_filter($out, function ($s) { return $s['value'] > 0; }));
+}
+
+/** Visible brand logos for the homepage carousel, in your chosen order. */
+function site_brand_logos()
+{
+    try {
+        $rows = all('SELECT * FROM brand_logos WHERE is_visible = 1 ORDER BY sort_order ASC, id ASC');
+    } catch (Throwable $e) {
+        return [];
+    }
+    return array_map(function ($r) {
+        return ['name' => $r['name'], 'logo' => upload_url($r['logo']), 'url' => $r['url']];
+    }, $rows);
 }
 
 /** Visible testimonials, in your chosen order. */

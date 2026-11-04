@@ -120,7 +120,7 @@ $matchData = [
                                 <?php if ($item['type'] === 'creator'):
                                     $pIcon = $platformMeta[$item['primary']]['icon'] ?? 'ph-globe'; ?>
                                     <div class="wcard wcard-creator" data-niches="<?= e(implode('|', $item['niches'])) ?>" data-plats="<?= e(implode('|', $item['platforms'])) ?>">
-                                        <img src="<?= e($item['photo']) ?>" alt="" loading="<?= $dup ? 'lazy' : 'eager' ?>" width="240" height="300">
+                                        <img src="<?= e($item['photo']) ?>" alt="" loading="<?= $dup ? 'lazy' : 'eager' ?>" width="240" height="300"<?= photo_fallback_attr($item) ?>>
                                         <span class="wc-reach"><i class="ph-fill <?= e($pIcon) ?>"></i><?= e(short_number($item['reach'])) ?></span>
                                         <span class="wc-info"><b><?= e($item['first']) ?></b><small><?= e($item['niches'][0] ?? 'Creator') ?><?= $item['city'] ? ' &middot; ' . e($item['city']) : '' ?></small></span>
                                     </div>
@@ -140,6 +140,28 @@ $matchData = [
         </div>
     </div>
 </section>
+
+<!-- ============ BRAND LOGOS (Admin > Site content > Brand logos; hidden when empty) ============ -->
+<?php if ($logos):
+    // Repeat the set so one half of the track is always wider than the screen.
+    $set = $logos;
+    while (count($set) < 10) $set = array_merge($set, $logos);
+?>
+<section class="logos" aria-label="<?= e(setting('logos_title', 'Brands we have worked with')) ?>">
+    <p class="logos-title"><?= e(setting('logos_title', 'Brands we have worked with')) ?></p>
+    <div class="logo-marquee" style="--logo-dur:<?= max(24, count($set) * 4) ?>s">
+        <ul class="logo-track">
+            <?php for ($half = 0; $half < 2; $half++): foreach ($set as $k => $l): $hide = $half || $k >= count($logos); ?>
+                <li<?= $hide ? ' aria-hidden="true"' : '' ?>>
+                    <?php if ($l['url'] && !$hide): ?><a href="<?= e($l['url']) ?>" target="_blank" rel="noopener nofollow"><?php endif; ?>
+                    <img src="<?= e($l['logo']) ?>" alt="<?= $hide ? '' : e($l['name']) ?>" loading="lazy" height="40">
+                    <?php if ($l['url'] && !$hide): ?></a><?php endif; ?>
+                </li>
+            <?php endforeach; endfor; ?>
+        </ul>
+    </div>
+</section>
+<?php endif; ?>
 
 <!-- ============ PLATFORMS ============ -->
 <section class="platforms" aria-label="Platforms we run campaigns on">

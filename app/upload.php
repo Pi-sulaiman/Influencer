@@ -127,6 +127,75 @@ function gd_resize($tmp, array $info, $targetNoExt, $maxSize)
 }
 
 /**
+ * Brand logo upload: SVG (cleaned of anything that could run) or a raster
+ * image. Returns a path like uploads/logos/2026/11/ab12cd.svg
+ */
+function save_logo_upload(array $file)
+{
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        throw new RuntimeException(upload_error_message($file['error'] ?? UPLOAD_ERR_NO_FILE));
+    }
+    $isSvg = preg_match('/\.svgz?$/i', (string) ($file['name'] ?? '')) || stripos((string) @file_get_contents($file['tmp_name'], false, null, 0, 600), '<svg') !== false;
+    if (!$isSvg) {
+        return save_image_upload($file, 'logos', 600);
+    }
+    if ($file['size'] > 1024 * 1024 || !is_uploaded_file($file['tmp_name'])) {
+        throw new RuntimeException('SVG logos must be under 1 MB.');
+    }
+    $clean = sanitize_svg((string) file_get_contents($file['tmp_name']));
+    if ($clean === null) {
+        throw new RuntimeException('That SVG could not be read. Try exporting it again, or upload a PNG.');
+    }
+    ensure_upload_protection();
+    $dir = ROOT . '/uploads/logos/' . date('Y/m');
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+        throw new RuntimeException('Upload folder is not writable. Check permissions on /uploads.');
+    }
+    $name = bin2hex(random_bytes(10)) . '.svg';
+    file_put_contents($dir . '/' . $name, $clean);
+    @chmod($dir . '/' . $name, 0644);
+    return 'uploads/logos/' . date('Y/m') . '/' . $name;
+}
+
+/** Strips scripts, event handlers, external references and embedded HTML from an SVG. */
+function sanitize_svg($svg)
+{
+    if (!class_exists('DOMDocument') || stripos($svg, '<!ENTITY') !== false) {
+        return null;
+    }
+    $doc = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $ok = $doc->loadXML($svg, LIBXML_NONET);
+    libxml_clear_errors();
+    if (!$ok || !$doc->documentElement || strtolower($doc->documentElement->localName) !== 'svg') {
+        return null;
+    }
+    $xpath = new DOMXPath($doc);
+    foreach (iterator_to_array($xpath->query('//*')) as $el) {
+        $tag = strtolower($el->localName);
+        if (in_array($tag, ['script', 'foreignobject', 'iframe', 'object', 'embed', 'audio', 'video', 'animate', 'set', 'handler', 'listener'], true)) {
+            $el->parentNode->removeChild($el);
+            continue;
+        }
+        foreach (iterator_to_array($el->attributes) as $attr) {
+            $n = strtolower($attr->nodeName);
+            $v = trim($attr->nodeValue);
+            if (strpos($n, 'on') === 0) {
+                $el->removeAttribute($attr->nodeName);
+            } elseif (($n === 'href' || $n === 'xlink:href') && $v !== '' && $v[0] !== '#' && !preg_match('#^data:image/(png|jpe?g|webp|gif);#i', $v)) {
+                $el->removeAttribute($attr->nodeName);
+            } elseif ($n === 'style' && preg_match('/(url\s*\(\s*[\'"]?\s*(https?:|javascript:)|expression\s*\(|@import)/i', $v)) {
+                $el->removeAttribute($attr->nodeName);
+            }
+        }
+        if ($tag === 'style') {
+            $el->nodeValue = preg_replace('/@import[^;]*;?|url\s*\(\s*[\'"]?\s*(https?:|javascript:)[^)]*\)/i', '', $el->nodeValue);
+        }
+    }
+    return $doc->saveXML($doc->documentElement);
+}
+
+/**
  * Makes sure uploads/.htaccess exists so nothing uploaded can run as a script.
  * A deploy that skips the uploads folder would otherwise leave it unprotected.
  */
@@ -142,7 +211,9 @@ function ensure_upload_protection()
         . "<FilesMatch \"(?i)\\.(php\\d?|phtml|phar|pl|py|cgi|sh|asp|aspx|jsp|shtml|htaccess)$\">\n"
         . "    <IfModule mod_authz_core.c>\n        Require all denied\n    </IfModule>\n"
         . "    <IfModule !mod_authz_core.c>\n        Order allow,deny\n        Deny from all\n    </IfModule>\n"
-        . "</FilesMatch>\n");
+        . "</FilesMatch>\n"
+        . "# SVG logos are shown as images only: nothing inside them may run.\n"
+        . "<IfModule mod_headers.c>\n    <FilesMatch \"(?i)\\.svg$\">\n        Header set Content-Security-Policy \"default-src 'none'; style-src 'unsafe-inline'; img-src data:\"\n    </FilesMatch>\n</IfModule>\n");
 }
 
 function delete_upload($relative)

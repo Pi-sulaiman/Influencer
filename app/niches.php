@@ -59,7 +59,7 @@ function niche_counts()
 {
     $counts = [];
     $platforms = array_keys(platform_options());
-    $rows = all("SELECT niches, instagram, youtube, tiktok, facebook, x FROM influencers WHERE status = 'approved'");
+    $rows = all("SELECT niches, instagram, youtube, tiktok, facebook, x FROM influencers WHERE status = 'approved' AND is_demo = 0");
     foreach ($rows as $r) {
         foreach (csv_list($r['niches']) as $n) {
             if (!isset($counts[$n])) {
@@ -79,7 +79,7 @@ function platform_totals()
 {
     $out = [];
     foreach (array_keys(platform_options()) as $p) {
-        $out[$p] = (int) val("SELECT COUNT(*) FROM influencers WHERE status = 'approved' AND $p IS NOT NULL AND $p <> ''");
+        $out[$p] = (int) val("SELECT COUNT(*) FROM influencers WHERE status = 'approved' AND is_demo = 0 AND $p IS NOT NULL AND $p <> ''");
     }
     return $out;
 }
@@ -104,7 +104,8 @@ function public_creators($limit = 24, $niche = null)
 /** SQL condition for creators brands may see on the website. */
 function roster_where()
 {
-    return "status = 'approved' AND consent_feature = 1 AND photo IS NOT NULL AND photo <> ''";
+    // Sample creators only appear while demo mode is on.
+    return "status = 'approved' AND consent_feature = 1 AND photo IS NOT NULL AND photo <> ''" . (demo_on() ? '' : ' AND is_demo = 0');
 }
 
 /**
@@ -186,6 +187,7 @@ function roster_card(array $r)
         'past_brands' => (string) ($r['past_brands'] ?? ''),
         'barter' => !empty($r['barter_ok']),
         'featured' => !empty($r['featured']),
+        'demo' => !empty($r['is_demo']),
         'created' => (string) $r['created_at'],
     ];
 }

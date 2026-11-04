@@ -192,6 +192,39 @@ function schema_migrations()
     $engine = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
     $big = $mysql ? 'BIGINT' : 'INTEGER';
     return [
+        6 => [
+            // Brand logos for the homepage carousel (Admin > Site content > Brand logos).
+            "CREATE TABLE IF NOT EXISTS brand_logos (
+                id $id,
+                name VARCHAR(160) NOT NULL,
+                logo VARCHAR(255) NOT NULL,
+                url VARCHAR(500) NULL,
+                sort_order INT NOT NULL DEFAULT 0,
+                is_visible INT NOT NULL DEFAULT 1,
+                created_at DATETIME NOT NULL
+            )$engine",
+            // Demo mode now has 48 sample creators: add the ones an earlier version did not have.
+            function () { if (demo_on() && demo_creator_count() > 0) seed_demo_creators(); },
+        ],
+        5 => [
+            // Demo mode: sample creators and example numbers, switched off in Admin > Settings.
+            'ALTER TABLE influencers ADD COLUMN is_demo INT NOT NULL DEFAULT 0',
+            function () {
+                if (setting('demo_mode') === '') save_setting('demo_mode', '1');
+                // The example figures now live in demo mode only, so real mode starts from live counts.
+                $examples = ['stat_creators' => '1200', 'stat_campaigns' => '340', 'stat_reach' => '85', 'stat_retention' => '92'];
+                $allExamples = true;
+                foreach ($examples as $k => $v) {
+                    if (!in_array(setting($k), ['', $v], true)) $allExamples = false;
+                }
+                if ($allExamples) {
+                    foreach (array_keys($examples) as $k) save_setting($k, '');
+                    save_setting('stats_mode', 'live');
+                }
+                settings_all(true);
+                if (demo_on()) seed_demo_creators();
+            },
+        ],
         4 => [
             // Richer creator profiles for agencies: public name, average views
             // per platform, monthly impressions, audience and a rate card.
@@ -317,11 +350,13 @@ function default_settings()
         'ga_id'              => '',
         'google_site_verification' => '',
         // Homepage numbers: 'custom' shows these figures, 'live' counts from the database (Admin > Site content).
-        'stats_mode'         => 'custom',
-        'stat_creators'      => '1200',
-        'stat_campaigns'     => '340',
-        'stat_reach'         => '85',
-        'stat_retention'     => '92',
+        'stats_mode'         => 'live',
+        'stat_creators'      => '',
+        'stat_campaigns'     => '',
+        'stat_reach'         => '',
+        'stat_retention'     => '',
+        // Demo mode shows sample creators and example numbers until you turn it off (Admin > Settings).
+        'demo_mode'          => '1',
         'theme_mode'         => 'auto',
         'currency_auto'      => '1',
         'fx_rates'           => default_fx_text(),

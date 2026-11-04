@@ -23,3 +23,5 @@ uploads/testimonials/*
 *.log
 .DS_Store
 Thumbs.db
+uploads/logos/*
+!uploads/logos/.gitkeep

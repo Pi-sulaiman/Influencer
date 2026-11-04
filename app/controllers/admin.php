@@ -15,7 +15,7 @@ function admin_counts()
     static $c = null;
     if ($c === null) {
         $c = [
-            'new_influencers' => (int) val("SELECT COUNT(*) FROM influencers WHERE status = 'new'"),
+            'new_influencers' => (int) val("SELECT COUNT(*) FROM influencers WHERE status = 'new' AND is_demo = 0"),
             'unread' => (int) val('SELECT COUNT(*) FROM messages WHERE is_read = 0'),
         ];
     }
@@ -74,25 +74,25 @@ function admin_dashboard()
     $d30 = date('Y-m-d 00:00:00', strtotime('-29 days'));
 
     $stats = [
-        'total' => (int) val('SELECT COUNT(*) FROM influencers'),
-        'new7' => (int) val('SELECT COUNT(*) FROM influencers WHERE created_at >= ?', [$d7]),
-        'prev7' => (int) val('SELECT COUNT(*) FROM influencers WHERE created_at >= ? AND created_at < ?', [$d14, $d7]),
-        'pending' => (int) val("SELECT COUNT(*) FROM influencers WHERE status = 'new'"),
-        'approved' => (int) val("SELECT COUNT(*) FROM influencers WHERE status = 'approved'"),
+        'total' => (int) val('SELECT COUNT(*) FROM influencers WHERE is_demo = 0'),
+        'new7' => (int) val('SELECT COUNT(*) FROM influencers WHERE is_demo = 0 AND created_at >= ?', [$d7]),
+        'prev7' => (int) val('SELECT COUNT(*) FROM influencers WHERE is_demo = 0 AND created_at >= ? AND created_at < ?', [$d14, $d7]),
+        'pending' => (int) val("SELECT COUNT(*) FROM influencers WHERE status = 'new' AND is_demo = 0"),
+        'approved' => (int) val("SELECT COUNT(*) FROM influencers WHERE status = 'approved' AND is_demo = 0"),
         'active_campaigns' => (int) val("SELECT COUNT(*) FROM campaigns WHERE status = 'active'"),
         'visits30' => (int) val('SELECT COUNT(*) FROM campaign_visits WHERE visited_at >= ?', [$d30]),
         'apps30' => (int) val('SELECT COUNT(*) FROM applications WHERE created_at >= ?', [$d30]),
-        'reach' => (int) val('SELECT SUM(total_followers) FROM influencers'),
+        'reach' => (int) val('SELECT SUM(total_followers) FROM influencers WHERE is_demo = 0'),
         'unread' => (int) val('SELECT COUNT(*) FROM messages WHERE is_read = 0'),
         'posts' => (int) val("SELECT COUNT(*) FROM posts WHERE status = 'published'"),
         'subscribers' => (int) val('SELECT COUNT(*) FROM subscribers'),
     ];
 
-    $regSeries = series_by_day(all('SELECT created_at FROM influencers WHERE created_at >= ?', [$d30]), 'created_at', 30);
+    $regSeries = series_by_day(all('SELECT created_at FROM influencers WHERE is_demo = 0 AND created_at >= ?', [$d30]), 'created_at', 30);
     $visitSeries = series_by_day(all('SELECT visited_at FROM campaign_visits WHERE visited_at >= ?', [$d30]), 'visited_at', 30);
 
     $niches = [];
-    foreach (all('SELECT niches FROM influencers ORDER BY id DESC LIMIT 5000') as $r) {
+    foreach (all('SELECT niches FROM influencers WHERE is_demo = 0 ORDER BY id DESC LIMIT 5000') as $r) {
         foreach (csv_list($r['niches']) as $n) {
             $niches[$n] = ($niches[$n] ?? 0) + 1;
         }
@@ -101,15 +101,15 @@ function admin_dashboard()
     $niches = array_slice($niches, 0, 6, true);
 
     $platforms = [];
-    foreach (all('SELECT primary_platform, COUNT(*) AS n FROM influencers GROUP BY primary_platform') as $r) {
+    foreach (all('SELECT primary_platform, COUNT(*) AS n FROM influencers WHERE is_demo = 0 GROUP BY primary_platform') as $r) {
         $platforms[$r['primary_platform'] ?: 'other'] = (int) $r['n'];
     }
     arsort($platforms);
 
     $currency = setting('default_currency', 'USD');
-    $fees = one('SELECT AVG(fee_min) AS amin, AVG(fee_max) AS amax, COUNT(*) AS n FROM influencers WHERE currency = ? AND fee_min IS NOT NULL', [$currency]);
+    $fees = one('SELECT AVG(fee_min) AS amin, AVG(fee_max) AS amax, COUNT(*) AS n FROM influencers WHERE is_demo = 0 AND currency = ? AND fee_min IS NOT NULL', [$currency]);
 
-    $recent = all('SELECT id, full_name, photo, city, country, niches, total_followers, fee_min, fee_max, currency, status, created_at FROM influencers ORDER BY created_at DESC LIMIT 6');
+    $recent = all('SELECT id, full_name, photo, city, country, niches, total_followers, fee_min, fee_max, currency, status, created_at FROM influencers WHERE is_demo = 0 ORDER BY created_at DESC LIMIT 6');
     $campaigns = all("SELECT c.*, (SELECT COUNT(*) FROM applications a WHERE a.campaign_id = c.id) AS apps FROM campaigns c WHERE c.status = 'active' ORDER BY c.created_at DESC LIMIT 5");
     $messages = all('SELECT id, name, inquiry_type, message, is_read, created_at FROM messages ORDER BY created_at DESC LIMIT 4');
 
@@ -132,7 +132,8 @@ function influencer_filters()
         'featured' => query('featured'),
         'sort' => query('sort', 'newest'),
     ];
-    $where = ['1 = 1'];
+    // Sample creators (demo mode) never mix with real ones in the admin.
+    $where = ['i.is_demo = 0'];
     $args = [];
     if ($f['q'] !== '') {
         $like = '%' . $f['q'] . '%';
@@ -196,7 +197,7 @@ function admin_influencers()
     $rows = all('SELECT i.*, (SELECT COUNT(*) FROM applications a WHERE a.influencer_id = i.id) AS app_count FROM influencers i' . $where . ' ORDER BY ' . $order . ' LIMIT ' . (int) $pg['per'] . ' OFFSET ' . (int) $pg['offset'], $args);
     $campaigns = all('SELECT id, title FROM campaigns ORDER BY created_at DESC');
     $statusCounts = [];
-    foreach (all('SELECT status, COUNT(*) AS n FROM influencers GROUP BY status') as $r) {
+    foreach (all('SELECT status, COUNT(*) AS n FROM influencers WHERE is_demo = 0 GROUP BY status') as $r) {
         $statusCounts[$r['status']] = (int) $r['n'];
     }
     admin_render('influencers', compact('f', 'rows', 'pg', 'campaigns', 'view', 'statusCounts'), 'Influencers');
@@ -312,6 +313,18 @@ function admin_influencer_view($params)
     if (!$inf) {
         not_found();
     }
+    if (is_post() && input('action') === 'photo') {
+        // Replace the profile photo (real creators, or your own mock photo for a sample creator).
+        try {
+            $photo = save_image_upload($_FILES['photo'] ?? [], 'creators', 900);
+            delete_upload($inf['photo']);
+            update('influencers', ['photo' => $photo, 'updated_at' => now()], 'id = ?', [$id]);
+            flash('success', 'Photo updated.');
+        } catch (RuntimeException $e) {
+            flash('error', $e->getMessage());
+        }
+        redirect('admin/influencers/' . $id);
+    }
     if (is_post()) {
         $status = input('status');
         $data = [
@@ -326,8 +339,8 @@ function admin_influencer_view($params)
         redirect('admin/influencers/' . $id);
     }
     $apps = all('SELECT a.*, c.title, c.code, c.brand_name, c.status AS campaign_status FROM applications a JOIN campaigns c ON c.id = a.campaign_id WHERE a.influencer_id = ? ORDER BY a.created_at DESC', [$id]);
-    $prevId = val('SELECT id FROM influencers WHERE id < ? ORDER BY id DESC LIMIT 1', [$id]);
-    $nextId = val('SELECT id FROM influencers WHERE id > ? ORDER BY id ASC LIMIT 1', [$id]);
+    $prevId = val('SELECT id FROM influencers WHERE is_demo = 0 AND id < ? ORDER BY id DESC LIMIT 1', [$id]);
+    $nextId = val('SELECT id FROM influencers WHERE is_demo = 0 AND id > ? ORDER BY id ASC LIMIT 1', [$id]);
     admin_render('influencer', compact('inf', 'apps', 'prevId', 'nextId'), $inf['full_name']);
 }
 
@@ -804,6 +817,20 @@ function admin_settings()
                 }
             }
             flash('success', 'Settings saved.');
+        } elseif ($section === 'demo') {
+            $on = input('demo_mode') === '1';
+            save_setting('demo_mode', $on ? '1' : '0');
+            settings_all(true);
+            $added = $on ? seed_demo_creators() : 0;
+            flash('success', $on
+                ? 'Demo mode is on. The website shows sample creators and example numbers' . ($added ? ' (' . $added . ' sample creators added)' : '') . '.'
+                : 'Demo mode is off. The website now shows only your real creators and real numbers.');
+            redirect('admin/settings#demo');
+        } elseif ($section === 'demo_delete') {
+            $n = delete_demo_creators();
+            save_setting('demo_mode', '0');
+            flash('success', $n . ' sample creators deleted and demo mode turned off.');
+            redirect('admin/settings#demo');
         } elseif ($section === 'account') {
             $full = one('SELECT * FROM admins WHERE id = ?', [$me['id']]);
             $name = mb_substr(input('name'), 0, 120);
@@ -853,7 +880,7 @@ function admin_settings()
     }
     settings_all(true);
     $admins = all('SELECT id, name, email, last_login_at, created_at FROM admins ORDER BY created_at');
-    admin_render('settings', ['me' => $me, 'admins' => $admins, 'fields' => settings_fields()], 'Settings');
+    admin_render('settings', ['me' => $me, 'admins' => $admins, 'fields' => settings_fields(), 'demoCount' => demo_creator_count(), 'demoPeople' => all('SELECT id, display_name, photo FROM influencers WHERE is_demo = 1 ORDER BY id')], 'Settings');
 }
 
 /* ---------------- Site content: numbers, testimonials, page photos ---------------- */
@@ -914,6 +941,44 @@ function admin_content()
             redirect('admin/content#testimonials');
         }
 
+        // Brand logos for the homepage carousel. Add only brands you have really worked with.
+        if ($action === 'logo') {
+            $name = mb_substr(input('name'), 0, 160);
+            $link = mb_substr(input('url'), 0, 500);
+            if ($link !== '' && !preg_match('#^https?://#i', $link)) $link = 'https://' . $link;
+            if ($name === '' || empty($_FILES['logo']['name'])) {
+                flash('error', 'Add the brand name and choose its logo file.');
+                redirect('admin/content#logos');
+            }
+            try {
+                $file = save_logo_upload($_FILES['logo']);
+            } catch (RuntimeException $e) {
+                flash('error', $e->getMessage());
+                redirect('admin/content#logos');
+            }
+            insert('brand_logos', ['name' => $name, 'logo' => $file, 'url' => $link !== '' && filter_var($link, FILTER_VALIDATE_URL) ? $link : null,
+                'sort_order' => (int) input('sort_order'), 'is_visible' => 1, 'created_at' => now()]);
+            flash('success', $name . ' added to the brand carousel.');
+            redirect('admin/content#logos');
+        }
+        if ($action === 'logo_toggle' || $action === 'logo_delete') {
+            $l = one('SELECT * FROM brand_logos WHERE id = ?', [(int) input('id')]);
+            if ($l && $action === 'logo_toggle') {
+                update('brand_logos', ['is_visible' => $l['is_visible'] ? 0 : 1], 'id = ?', [$l['id']]);
+                flash('success', $l['name'] . ($l['is_visible'] ? ' is hidden.' : ' is visible again.'));
+            } elseif ($l) {
+                delete_upload($l['logo']);
+                q('DELETE FROM brand_logos WHERE id = ?', [$l['id']]);
+                flash('success', $l['name'] . ' removed.');
+            }
+            redirect('admin/content#logos');
+        }
+        if ($action === 'logos_title') {
+            save_setting('logos_title', mb_substr(input('logos_title'), 0, 120));
+            flash('success', 'Carousel title saved.');
+            redirect('admin/content#logos');
+        }
+
         if ($action === 'delete_testimonial') {
             $t = one('SELECT * FROM testimonials WHERE id = ?', [(int) input('id')]);
             if ($t) {
@@ -956,6 +1021,7 @@ function admin_content()
     $editing = query('edit') ? one('SELECT * FROM testimonials WHERE id = ?', [(int) query('edit')]) : null;
     admin_render('content', [
         'live' => live_stats(),
+        'logos' => all('SELECT * FROM brand_logos ORDER BY sort_order ASC, id ASC'),
         'testimonials' => $testimonials,
         'editing' => $editing,
         'slots' => site_image_slots(),

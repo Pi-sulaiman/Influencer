@@ -28,6 +28,7 @@ require APP . '/seo.php';
 require APP . '/upload.php';
 require APP . '/schema.php';
 require APP . '/niches.php';
+require APP . '/demo.php';
 require APP . '/content.php';
 require APP . '/geo.php';
 

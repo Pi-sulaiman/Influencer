@@ -9,3 +9,9 @@ Options -Indexes -ExecCGI
         Deny from all
     </IfModule>
 </FilesMatch>
+# SVG logos are shown as images only: nothing inside them may run.
+<IfModule mod_headers.c>
+    <FilesMatch "(?i)\.svg$">
+        Header set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src data:"
+    </FilesMatch>
+</IfModule>

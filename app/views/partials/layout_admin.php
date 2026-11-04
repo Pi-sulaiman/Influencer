@@ -73,6 +73,9 @@ $renderLinks = function ($items) use ($isActive) {
         </form>
     </header>
     <div class="content">
+        <?php if (demo_on() && !current_url_is('admin/settings')): ?>
+            <div class="demo-strip" role="note"><i class="ph-bold ph-flask"></i><span><b>Demo mode is on.</b> The website shows sample creators and example numbers. Your real data below is not affected.</span><a href="<?= e(url('admin/settings#demo')) ?>">Turn off</a></div>
+        <?php endif; ?>
         <?php foreach (flashes() as $f): ?>
             <div class="alert alert-<?= $f['type'] === 'success' ? 'success' : 'error' ?>" role="status"><i class="ph-fill <?= $f['type'] === 'success' ? 'ph-check-circle' : 'ph-warning-circle' ?>"></i><span><?= e($f['message']) ?></span></div>
         <?php endforeach; ?>
