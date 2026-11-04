@@ -460,3 +460,12 @@ p { margin: 0; }
 .install-help .ih-code { margin: 0 0 10px; padding: 12px 14px; border-radius: 10px; background: #1B1E27; color: #F4EFEA; font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-x: auto; white-space: pre; }
 .install-help details summary { cursor: pointer; font-weight: 700; font-size: 13px; color: #8E1F14; }
 .install-help details small { display: block; margin-top: 6px; word-break: break-word; }
+
+/* Quote request: creator cost estimate */
+.quote-sum { border-top: 1px solid var(--line); display: grid; gap: 10px; }
+.quote-sum > div { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
+.quote-sum span { font-size: 13.5px; color: var(--muted); font-weight: 600; }
+.quote-sum b { font-size: 20px; font-weight: 900; letter-spacing: -.02em; color: var(--red-deep); }
+
+/* Grid children may shrink, so wide tables scroll inside their card. */
+.grid > * { min-width: 0; }

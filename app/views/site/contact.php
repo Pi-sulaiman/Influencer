@@ -1,4 +1,4 @@
-<?php /** @var array $errors @var array $data @var bool $sent @var array $pool */
+<?php /** @var array $errors @var array $data @var bool $sent @var array $pool @var array $picked */
 $err = function ($k) use ($errors) { return isset($errors[$k]) ? '<p class="field-error" id="err-' . $k . '"><i class="ph-bold ph-warning-circle"></i>' . e($errors[$k]) . '</p>' : ''; };
 $has = function ($k) use ($errors) { return isset($errors[$k]) ? ' has-error' : ''; };
 $inv = function ($k) use ($errors) { return isset($errors[$k]) ? ' aria-invalid="true" aria-describedby="err-' . $k . '"' : ''; };
@@ -9,8 +9,13 @@ $isBrand = $data['inquiry_type'] === 'brand';
 <section class="page-hero" style="padding-bottom:20px">
     <div class="container">
         <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="<?= e(url('')) ?>">Home</a><span aria-hidden="true">/</span><span>Contact</span></nav>
-        <h1 class="h1" data-split>Build your campaign brief.</h1>
-        <p class="lead">Two minutes, four quick steps. A real person from the Peakilo team replies within one business day with a creator plan.</p>
+        <?php if ($picked && !$sent): ?>
+            <h1 class="h1" data-split>Request a quote.</h1>
+            <p class="lead">Tell us about the campaign for the <?= count($picked) === 1 ? 'creator' : count($picked) . ' creators' ?> you picked. We confirm availability and send pricing within one business day. Nothing to pay online.</p>
+        <?php else: ?>
+            <h1 class="h1" data-split>Build your campaign brief.</h1>
+            <p class="lead">Two minutes, four quick steps. A real person from the Peakilo team replies within one business day with a creator plan.</p>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -20,10 +25,18 @@ $isBrand = $data['inquiry_type'] === 'brand';
             <?php if ($sent): ?>
                 <div class="contact-card brief-done" data-reveal="scale">
                     <span class="bd-mark"><?= mark_svg('') ?><i class="ph-bold ph-check"></i></span>
-                    <h2 class="h2"><?= query('brief') ? 'Your brief is in.' : 'Message received.' ?></h2>
-                    <p class="lead"><?= query('brief') ? 'We are reviewing it now and will reply within one business day with a shortlist approach and a quote.' : 'Thanks for reaching out. We will reply within one business day.' ?></p>
+                    <h2 class="h2"><?= query('picked') ? 'Quote request sent.' : (query('brief') ? 'Your brief is in.' : 'Message received.') ?></h2>
+                    <p class="lead"><?php if (query('picked')): ?>We are checking availability for the <?= (int) query('picked') === 1 ? 'creator' : (int) query('picked') . ' creators' ?> you picked and will reply within one business day with a quote. There is nothing to pay now.<?php elseif (query('brief')): ?>We are reviewing it now and will reply within one business day with a shortlist approach and a quote.<?php else: ?>Thanks for reaching out. We will reply within one business day.<?php endif; ?></p>
+                    <?php if (query('picked')): ?><span data-sl-clear-on-load hidden></span><?php endif; ?>
+                    <?php if (query('brief')): ?>
+                    <ol class="next-steps">
+                        <li><b>Today</b><span>We review your brief and contact the creators.</span></li>
+                        <li><b>Within 1 business day</b><span>You get availability, a quote and content ideas.</span></li>
+                        <li><b>When you approve</b><span>We sign one contract and manage the campaign end to end.</span></li>
+                    </ol>
+                    <?php endif; ?>
                     <div class="ctas" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:26px">
-                        <a class="btn btn-primary" href="<?= e(url('influencers')) ?>">Explore creator niches</a>
+                        <a class="btn btn-primary" href="<?= e(url('talent')) ?>">Browse more creators</a>
                         <a class="btn btn-outline" href="<?= e(url('blog')) ?>">Read the blog</a>
                     </div>
                 </div>
@@ -38,6 +51,27 @@ $isBrand = $data['inquiry_type'] === 'brand';
                         <label class="chip"><input type="radio" name="inquiry_type" value="<?= $val ?>"<?= $data['inquiry_type'] === $val ? ' checked' : '' ?> data-type><span><i class="ph-bold <?= $t[0] ?>"></i><?= $t[1] ?></span></label>
                     <?php endforeach; ?>
                 </div>
+
+                <?php if ($picked): ?>
+                    <div class="picked" data-brand-only data-picked>
+                        <div class="picked-head"><b><i class="ph-fill ph-heart"></i> Creators in this request <span data-picked-count><?= count($picked) ?></span></b><a class="link-btn" href="<?= e(url('talent')) ?>">Add more</a></div>
+                        <ul>
+                            <?php foreach ($picked as $c): ?>
+                                <li data-picked-item="<?= e($c['code']) ?>">
+                                    <input type="hidden" name="creators[]" value="<?= e($c['code']) ?>">
+                                    <img src="<?= e($c['photo']) ?>" alt="" width="44" height="44" loading="lazy">
+                                    <span><b><?= e($c['name']) ?></b><small><?= e($c['niches'][0] ?? 'Creator') ?> &middot; <?= e(short_number($c['reach'])) ?> followers</small></span>
+                                    <button type="button" class="icon-btn" data-unpick="<?= e($c['code']) ?>" aria-label="Remove <?= e($c['name']) ?> from this request"><i class="ph-bold ph-x"></i></button>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php else: ?>
+                    <div class="picked-offer" data-brand-only data-sl-offer hidden>
+                        <i class="ph-fill ph-heart"></i><span>You have <b data-sl-offer-count>0</b> shortlisted. Add them to this brief?</span>
+                        <a class="btn btn-dark btn-sm" href="<?= e(url('contact?type=brand')) ?>" data-sl-offer-link>Add creators</a>
+                    </div>
+                <?php endif; ?>
 
                 <div data-brand-only>
                     <ol class="bsteps" aria-label="Brief progress" data-bsteps>
@@ -58,7 +92,7 @@ $isBrand = $data['inquiry_type'] === 'brand';
                     <fieldset class="bstep" data-bstep>
                         <legend class="jstep-title">Who do you want to reach?</legend>
                         <div class="field<?= $has('niches') ?>">
-                            <span class="label">Niches <span class="opt">(pick up to 6)</span></span>
+                            <span class="label">Niches <span class="opt"><?= $picked ? '(based on the creators you picked, change if you like)' : '(pick up to 6)' ?></span></span>
                             <div class="chips" data-max="6" data-brief-niches>
                                 <?php foreach ($catalog as $n): ?>
                                     <label class="chip"><input type="checkbox" name="niches[]" value="<?= e($n['name']) ?>"<?= in_array($n['name'], $data['niches'], true) ? ' checked' : '' ?>><span><i class="ph-bold <?= e($n['icon']) ?>"></i><?= e($n['name']) ?></span></label>
@@ -140,7 +174,7 @@ $isBrand = $data['inquiry_type'] === 'brand';
                         </div>
                     </div>
                     <button class="btn btn-primary btn-lg btn-block" style="margin-top:22px" type="submit" data-brief-submit><span data-submit-label><?= $isBrand ? 'Send my brief' : 'Send message' ?></span> <i class="ph-bold ph-paper-plane-tilt"></i></button>
-                    <p class="field-help" style="margin-top:12px;text-align:center">By sending this you agree to our <a class="accent" href="<?= e(url('privacy')) ?>">privacy policy</a>.</p>
+                    <p class="field-help" style="margin-top:12px;text-align:center"><span data-brand-only><i class="ph-bold ph-shield-check"></i> No payment now. We reply with availability and a quote. </span>By sending this you agree to our <a class="accent" href="<?= e(url('privacy')) ?>">privacy policy</a>.</p>
                 </fieldset>
 
                 <div class="jnav" data-bnav hidden>
@@ -156,6 +190,7 @@ $isBrand = $data['inquiry_type'] === 'brand';
             <div class="brief-summary" data-brand-only data-summary>
                 <p class="jp-label">Your brief</p>
                 <dl>
+                    <?php if ($picked): ?><div><dt>Creators</dt><dd data-s-creators><?= count($picked) ?> picked</dd></div><?php endif; ?>
                     <div><dt>Goal</dt><dd data-s-goal>Not chosen yet</dd></div>
                     <div><dt>Niches</dt><dd data-s-niches>Not chosen yet</dd></div>
                     <div><dt>Platforms</dt><dd data-s-platforms>Any</dd></div>

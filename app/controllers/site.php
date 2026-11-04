@@ -145,6 +145,12 @@ function site_contact()
     if (($n = query('niche')) && in_array($n, niche_options(), true)) $data['niches'] = [$n];
     if (($p = query('platform')) && array_key_exists($p, platform_options())) $data['platforms'] = [$p];
 
+    // Creators a brand shortlisted on /talent ("Request a quote").
+    $picked = roster_by_codes(is_post() ? input_array('creators') : csv_list(query('creators')));
+    if ($picked && !is_post() && !$data['niches']) {
+        $data['niches'] = picked_niches($picked);
+    }
+
     if (is_post()) {
         foreach (['name', 'email', 'company', 'phone', 'website', 'inquiry_type', 'budget', 'message', 'goal', 'timeline', 'target_location'] as $k) {
             $data[$k] = mb_substr((string) input($k), 0, $k === 'message' ? 5000 : 190);
@@ -167,7 +173,8 @@ function site_contact()
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) $errors['email'] = 'Enter a valid email so we can reply.';
         if ($isBrand) {
             if ($data['goal'] === '') $errors['goal'] = 'Choose the main goal for this campaign.';
-            if (!$data['niches']) $errors['niches'] = 'Pick at least one niche.';
+            if (!$data['niches'] && !$picked) $errors['niches'] = 'Pick at least one niche.';
+            if (!$data['niches'] && $picked) $data['niches'] = picked_niches($picked);
         } elseif (mb_strlen($data['message']) < 10) {
             $errors['message'] = 'Add a few details so we can help (10 characters minimum).';
         }
@@ -189,13 +196,22 @@ function site_contact()
                 'tiers' => $data['tiers'] ? implode(', ', $data['tiers']) : null,
                 'timeline' => $data['timeline'] ?: null,
                 'target_location' => $data['target_location'] ?: null,
+                'creator_ids' => $isBrand && $picked ? implode(',', array_column($picked, 'id')) : null,
+                'creator_ref' => $isBrand && $picked ? mb_substr(implode(', ', array_column($picked, 'code')), 0, 190) : null,
                 'is_read' => 0, 'ip_hash' => ip_hash(), 'created_at' => now(),
             ];
             $id = insert('messages', $row);
             $brief = $isBrand ? "Goal: {$row['goal']}\nNiches: {$row['niches']}\nPlatforms: {$row['platforms']}\nCreator tiers: {$row['tiers']}\nBudget: {$row['budget']}\nTimeline: {$row['timeline']}\nTarget location: {$row['target_location']}\nWebsite: {$row['website']}\n\n" : '';
+            if ($isBrand && $picked) {
+                $brief .= 'Creators requested (' . count($picked) . "):\n";
+                foreach ($picked as $c) {
+                    $brief .= '- ' . $c['code'] . ' ' . $c['name'] . ', ' . short_number($c['reach']) . ' followers, ' . implode('/', $c['niches']) . "\n";
+                }
+                $brief .= "\n";
+            }
             send_mail(setting('contact_email'), ($isBrand ? 'New campaign brief' : 'New ' . $data['inquiry_type'] . ' enquiry') . ' from ' . $data['name'] . ($data['company'] ? ' (' . $data['company'] . ')' : ''),
                 "Name: {$data['name']}\nEmail: {$data['email']}\nCompany: {$data['company']}\nPhone: {$data['phone']}\n\n{$brief}{$row['message']}\n\nView in admin: " . abs_url('admin/messages/' . $id));
-            redirect('contact?sent=1' . ($isBrand ? '&brief=1' : ''));
+            redirect('contact?sent=1' . ($isBrand ? '&brief=1' : '') . ($isBrand && $picked ? '&picked=' . count($picked) : ''));
         }
     }
 
@@ -208,11 +224,12 @@ function site_contact()
         $pool[] = [csv_list($r['niches']), $pl];
     }
 
-    render('site/contact', ['errors' => $errors, 'data' => $data, 'sent' => query('sent') === '1', 'pool' => $pool, 'liveCounts' => $liveCounts], [
+    render('site/contact', ['errors' => $errors, 'data' => $data, 'sent' => query('sent') === '1', 'pool' => $pool, 'liveCounts' => $liveCounts, 'picked' => $picked], [
         'title' => 'Start a Campaign or Contact Peakilo',
         'description' => 'Build your influencer campaign brief in two minutes. Pick your goal, niches, platforms and budget, and the Peakilo team will reply within one business day.',
         'schema' => [schema_breadcrumbs(['Home' => '', 'Contact' => 'contact'])],
-        'robots' => query('sent') ? 'noindex' : null,
+        'robots' => query('sent') || $picked ? 'noindex' : null,
+        'body_class' => 'page-contact',
         'scripts' => ['js/brief.js'],
     ]);
 }
@@ -240,6 +257,85 @@ function site_subscribe()
     }
     flash($ok ? 'success' : 'error', $msg);
     back('');
+}
+
+/** Most common niches across the creators a brand picked (max 6). */
+function picked_niches(array $picked)
+{
+    $count = [];
+    foreach ($picked as $c) {
+        foreach ($c['niches'] as $n) {
+            if (in_array($n, niche_options(), true)) $count[$n] = ($count[$n] ?? 0) + 1;
+        }
+    }
+    arsort($count);
+    return array_slice(array_keys($count), 0, 6);
+}
+
+/* ---------------- Talent roster (brands browse and shortlist) ---------------- */
+
+function talent_sorts()
+{
+    return ['featured' => 'Recommended', 'reach' => 'Most followers', 'views' => 'Most avg. views', 'er' => 'Highest engagement', 'newest' => 'Newest'];
+}
+
+function site_talent()
+{
+    $tiers = ['nano' => 'Nano', 'micro' => 'Micro', 'mid' => 'Mid-tier', 'macro' => 'Macro', 'mega' => 'Mega'];
+    $f = [
+        'q' => mb_substr(query('q'), 0, 60),
+        'niche' => in_array(query('niche'), niche_options(), true) ? query('niche') : '',
+        'platform' => array_key_exists(query('platform'), platform_options()) ? query('platform') : '',
+        'tier' => array_key_exists(query('tier'), $tiers) ? query('tier') : '',
+        'sort' => array_key_exists(query('sort'), talent_sorts()) ? query('sort') : 'featured',
+    ];
+    $total = (int) val('SELECT COUNT(*) FROM influencers WHERE ' . roster_where());
+    // Every card is rendered; ones outside the filters are hidden, so the
+    // page can re-filter instantly in the browser without a reload.
+    $matching = array_flip(array_map(function ($r) { return (int) $r['id']; }, roster_rows($f)));
+    $cards = array_map(function ($r) use ($matching) { return roster_card($r) + ['match' => isset($matching[(int) $r['id']])]; }, roster_rows([]));
+    $sortKey = ['reach' => 'reach', 'views' => 'views', 'er' => 'er'][$f['sort']] ?? null;
+    if ($sortKey) {
+        usort($cards, function ($a, $b) use ($sortKey) { return ($b[$sortKey] ?? 0) <=> ($a[$sortKey] ?? 0); });
+    } elseif ($f['sort'] === 'newest') {
+        usort($cards, function ($a, $b) { return strcmp($b['created'], $a['created']); });
+    }
+    render('site/talent', compact('f', 'cards', 'total', 'tiers'), [
+        'title' => 'Find Influencers to Book',
+        'description' => 'Browse vetted creators by niche, platform and audience size. Shortlist the ones you like and Peakilo sends availability and a quote within one business day.',
+        'canonical' => abs_url('talent'),
+        'robots' => array_filter([$f['q'], $f['niche'], $f['platform'], $f['tier']]) ? 'noindex, follow' : null,
+        'schema' => [schema_breadcrumbs(['Home' => '', 'Find talent' => 'talent'])],
+        'scripts' => ['js/talent.js'],
+    ]);
+}
+
+function site_talent_profile($params)
+{
+    $id = creator_id_from_code($params['code']);
+    $row = $id ? one('SELECT * FROM influencers WHERE id = ? AND ' . roster_where(), [$id]) : null;
+    if (!$row) {
+        not_found();
+    }
+    $c = roster_card($row);
+    if (strtoupper($params['code']) !== $c['code']) {
+        redirect('talent/' . $c['code'], 301);
+    }
+    $similar = [];
+    if ($c['niches']) {
+        foreach (roster_rows(['niche' => $c['niches'][0]], 8) as $r) {
+            if ((int) $r['id'] !== $c['id']) $similar[] = roster_card($r);
+        }
+    }
+    render('site/talent_profile', ['c' => $c, 'similar' => array_slice($similar, 0, 4)], [
+        'title' => $c['name'] . ', ' . ($c['niches'][0] ?? 'Content') . ' creator',
+        'description' => $c['name'] . ' is a ' . strtolower($c['tier']['label']) . ' ' . strtolower(implode(' and ', array_slice($c['niches'], 0, 2))) . ' creator'
+            . ($c['city'] ? ' from ' . $c['city'] : '') . ' with ' . short_number($c['reach']) . ' followers. Book through Peakilo.',
+        'canonical' => abs_url('talent/' . $c['code']),
+        'image' => preg_match('#^https?://#', $c['photo']) ? $c['photo'] : site_origin() . $c['photo'],
+        'schema' => [schema_breadcrumbs(['Home' => '', 'Find talent' => 'talent', $c['name'] => 'talent/' . $c['code']])],
+        'scripts' => ['js/talent.js'],
+    ]);
 }
 
 /* ---------------- Niche landing pages (SEO) ---------------- */

@@ -106,6 +106,19 @@ if ($ref && !current_url_is('join')) {
 
 <?php partial('footer'); ?>
 
+<div class="sl-tray" data-sl-tray data-base="<?= e(url('')) ?>" hidden>
+    <div class="sl-panel" data-sl-panel id="sl-panel" hidden>
+        <div class="sl-panel-head"><b>Your shortlist</b><button type="button" class="link-btn" data-sl-clearall>Clear all</button></div>
+        <ul data-sl-items></ul>
+        <p class="sl-note"><i class="ph-bold ph-shield-check"></i>Saved in this browser. Send it as one quote request, with nothing to pay online.</p>
+    </div>
+    <button type="button" class="sl-open" data-sl-toggle aria-expanded="false" aria-controls="sl-panel">
+        <span class="sl-faces" data-sl-faces aria-hidden="true"></span>
+        <span class="sl-text"><b data-sl-count>0 creators</b><small>in your shortlist</small></span>
+        <i class="ph-bold ph-caret-up sl-caret" aria-hidden="true"></i>
+    </button>
+    <a class="btn btn-primary btn-sm sl-request" href="<?= e(url('contact?type=brand')) ?>" data-sl-request>Request quote <i class="ph-bold ph-arrow-up-right"></i></a>
+</div>
 <div class="toast" role="status" aria-live="polite" data-toast><i class="ph-fill ph-check-circle"></i><span></span></div>
 <div class="grain" aria-hidden="true"></div>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" defer></script>
@@ -113,6 +126,7 @@ if ($ref && !current_url_is('join')) {
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.11/dist/lenis.min.js" defer></script>
 <script src="<?= e(asset('js/site.js')) ?>" defer></script>
 <script src="<?= e(asset('js/motion.js')) ?>" defer></script>
+<script src="<?= e(asset('js/shortlist.js')) ?>" defer></script>
 <?php if (!empty($meta['scripts'])) foreach ((array) $meta['scripts'] as $s): ?>
 <script src="<?= e(asset($s)) ?>" defer></script>
 <?php endforeach; ?>

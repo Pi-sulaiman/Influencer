@@ -90,31 +90,125 @@ function platform_totals()
  */
 function public_creators($limit = 24, $niche = null)
 {
-    $sql = "SELECT id, full_name, city, country, niches, photo, total_followers, primary_platform, instagram, youtube, tiktok, facebook, x, featured
-            FROM influencers
-            WHERE status = 'approved' AND consent_feature = 1 AND photo IS NOT NULL AND photo <> ''";
+    $out = [];
+    foreach (roster_rows($niche ? ['niche' => $niche] : [], $limit) as $r) {
+        $c = roster_card($r);
+        $out[] = $c + [
+            'first' => $c['name'],
+            'city' => $c['city'] ?: $c['country'],
+        ];
+    }
+    return $out;
+}
+
+/** SQL condition for creators brands may see on the website. */
+function roster_where()
+{
+    return "status = 'approved' AND consent_feature = 1 AND photo IS NOT NULL AND photo <> ''";
+}
+
+/**
+ * The public name: the creator name they chose, otherwise first name and
+ * last initial. Full legal names stay private.
+ */
+function public_name(array $r)
+{
+    if (!empty($r['display_name'])) {
+        return $r['display_name'];
+    }
+    $parts = preg_split('/\s+/', trim((string) $r['full_name']));
+    $first = $parts[0] ?? 'Creator';
+    return count($parts) > 1 ? $first . ' ' . mb_strtoupper(mb_substr(end($parts), 0, 1)) . '.' : $first;
+}
+
+/** Rows for the public roster. Filters: niche, platform, tier, q. */
+function roster_rows(array $f = [], $limit = 300)
+{
+    $sql = 'SELECT * FROM influencers WHERE ' . roster_where();
     $args = [];
-    if ($niche) {
+    if (!empty($f['niche'])) {
         $sql .= ' AND niches LIKE ?';
-        $args[] = '%' . $niche . '%';
+        $args[] = '%' . $f['niche'] . '%';
+    }
+    if (!empty($f['platform']) && array_key_exists($f['platform'], platform_options())) {
+        $sql .= " AND {$f['platform']} IS NOT NULL AND {$f['platform']} <> ''";
     }
     $sql .= ' ORDER BY featured DESC, total_followers DESC LIMIT ' . (int) $limit;
-    $out = [];
-    foreach (all($sql, $args) as $r) {
-        $plats = [];
-        foreach (array_keys(platform_options()) as $p) {
-            if (!empty($r[$p])) $plats[] = $p;
-        }
-        $out[] = [
-            'name' => $r['full_name'],
-            'first' => explode(' ', trim($r['full_name']))[0],
-            'city' => $r['city'] ?: $r['country'],
-            'niches' => csv_list($r['niches']),
-            'photo' => upload_url($r['photo']),
-            'reach' => (int) $r['total_followers'],
-            'platforms' => $plats,
-            'primary' => $r['primary_platform'] ?: ($plats[0] ?? null),
+    $rows = all($sql, $args);
+    if (!empty($f['tier'])) {
+        $rows = array_values(array_filter($rows, function ($r) use ($f) { return creator_tier($r['total_followers'])['key'] === $f['tier']; }));
+    }
+    if (!empty($f['q'])) {
+        $q = mb_strtolower($f['q']);
+        $rows = array_values(array_filter($rows, function ($r) use ($q) {
+            return mb_strpos(mb_strtolower(public_name($r) . ' ' . $r['city'] . ' ' . $r['country'] . ' ' . $r['niches']), $q) !== false;
+        }));
+    }
+    return $rows;
+}
+
+/**
+ * Public card data for one creator. Never includes fees, contact details,
+ * handles or links, so brands book through Peakilo.
+ */
+function roster_card(array $r)
+{
+    $channels = [];
+    foreach (platform_options() as $p => $meta) {
+        if (empty($r[$p])) continue;
+        $channels[$p] = [
+            'label' => $meta['label'],
+            'icon' => $meta['icon'],
+            'followers' => (int) $r[$p . '_followers'],
+            'views' => (int) ($r[$p . '_avg_views'] ?? 0),
         ];
+    }
+    return [
+        'id' => (int) $r['id'],
+        'code' => creator_code($r['id']),
+        'name' => public_name($r),
+        'city' => (string) $r['city'],
+        'country' => (string) $r['country'],
+        'niches' => csv_list($r['niches']),
+        'content_types' => csv_list($r['content_types']),
+        'languages' => (string) $r['languages'],
+        'photo' => upload_url($r['photo']),
+        'reach' => (int) $r['total_followers'],
+        'views' => (int) ($r['avg_impressions'] ?? 0),
+        'monthly' => (int) ($r['monthly_impressions'] ?? 0),
+        'er' => $r['engagement_rate'] !== null ? (float) $r['engagement_rate'] : null,
+        'tier' => creator_tier($r['total_followers']),
+        'channels' => $channels,
+        'platforms' => array_keys($channels),
+        'primary' => $r['primary_platform'] ?: (array_keys($channels)[0] ?? null),
+        'audience' => array_values(array_filter([$r['audience_country'] ?? '', $r['audience_age'] ?? '', $r['audience_gender'] ?? ''])),
+        'bio' => (string) $r['bio'],
+        'past_brands' => (string) ($r['past_brands'] ?? ''),
+        'barter' => !empty($r['barter_ok']),
+        'featured' => !empty($r['featured']),
+        'created' => (string) $r['created_at'],
+    ];
+}
+
+/** Public creators by code (PK1001...), in the order given. Unknown codes are dropped. */
+function roster_by_codes(array $codes, $max = 20)
+{
+    $ids = [];
+    foreach ($codes as $c) {
+        $id = creator_id_from_code($c);
+        if ($id > 0 && !in_array($id, $ids, true)) $ids[] = $id;
+    }
+    $ids = array_slice($ids, 0, $max);
+    if (!$ids) {
+        return [];
+    }
+    $rows = [];
+    foreach (all('SELECT * FROM influencers WHERE ' . roster_where() . ' AND id IN (' . in_placeholders($ids) . ')', $ids) as $r) {
+        $rows[(int) $r['id']] = $r;
+    }
+    $out = [];
+    foreach ($ids as $id) {
+        if (isset($rows[$id])) $out[] = roster_card($rows[$id]);
     }
     return $out;
 }

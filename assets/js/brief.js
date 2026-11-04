@@ -75,7 +75,7 @@
       ok = !!g;
     }
     if (i === 1) {
-      var n = $$('input[name="niches[]"]:checked').length;
+      var n = $$('input[name="niches[]"]:checked').length + $$('input[name="creators[]"]').length;
       showError($('[data-brief-niches]'), n ? '' : 'Pick at least one niche.');
       ok = n > 0;
     }
@@ -120,6 +120,21 @@
       }
     } else if (!validate(3)) { e.preventDefault(); return; }
     $('[data-brief-submit]').classList.add('is-loading');
+  });
+
+  /* Creators picked on /talent: take one out of this request */
+  form.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-unpick]');
+    if (!b) return;
+    var code = b.getAttribute('data-unpick');
+    var li = b.closest('[data-picked-item]');
+    if (li) li.remove();
+    if (window.PkShortlist) window.PkShortlist.remove(code);
+    var left = $$('[data-picked-item]').length;
+    var c = $('[data-picked-count]'); if (c) c.textContent = left;
+    var s = document.querySelector('[data-s-creators]'); if (s) s.textContent = left ? left + ' picked' : 'None';
+    if (!left) { var box = $('[data-picked]'); if (box) box.remove(); }
+    toast('Taken out of this request');
   });
 
   /* Max 6 niches */

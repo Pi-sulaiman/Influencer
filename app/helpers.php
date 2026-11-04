@@ -721,6 +721,7 @@ function mark_svg($class = 'logo-mark', $label = '')
 function nav_items()
 {
     return [
+        'talent'   => 'Find talent',
         'services' => 'Services',
         'brands'   => 'For brands',
         'creators' => 'For creators',

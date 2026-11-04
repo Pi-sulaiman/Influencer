@@ -701,7 +701,28 @@ function admin_message_view($params)
     if (!$m['is_read']) {
         update('messages', ['is_read' => 1], 'id = ?', [$m['id']]);
     }
-    admin_render('message', compact('m'), 'Message from ' . $m['name']);
+    // Creators the brand shortlisted on /talent, with their private fees so
+    // the team can build a quote. Totals are grouped per currency.
+    $requested = [];
+    $costs = [];
+    $ids = array_values(array_filter(array_map('intval', explode(',', (string) ($m['creator_ids'] ?? '')))));
+    if ($ids) {
+        $rows = [];
+        foreach (all('SELECT * FROM influencers WHERE id IN (' . in_placeholders($ids) . ')', $ids) as $r) {
+            $rows[(int) $r['id']] = $r;
+        }
+        foreach ($ids as $id) {
+            if (!isset($rows[$id])) continue;
+            $r = $rows[$id];
+            $requested[] = $r;
+            $cur = $r['currency'] ?: setting('default_currency', 'USD');
+            $costs[$cur] = $costs[$cur] ?? ['min' => 0, 'max' => 0, 'n' => 0];
+            $costs[$cur]['min'] += (float) ($r['fee_min'] ?? $r['fee_max'] ?? 0);
+            $costs[$cur]['max'] += (float) ($r['fee_max'] ?? $r['fee_min'] ?? 0);
+            $costs[$cur]['n']++;
+        }
+    }
+    admin_render('message', compact('m', 'requested', 'costs'), 'Message from ' . $m['name']);
 }
 
 function admin_message_delete($params)

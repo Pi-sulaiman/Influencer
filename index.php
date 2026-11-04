@@ -30,6 +30,8 @@ $routes = [
     ['GET',      '/terms',                    'site_terms'],
     ['GET',      '/influencers',              'site_niches'],
     ['GET',      '/influencers/{slug}',       'site_niche'],
+    ['GET',      '/talent',                   'site_talent'],
+    ['GET',      '/talent/{code}',            'site_talent_profile'],
 
     // Blog + SEO files
     ['GET',      '/blog',                     'blog_index'],

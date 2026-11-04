@@ -1,4 +1,5 @@
-<?php /** @var array $m */
+<?php /** @var array $m @var array $requested @var array $costs */
+$platforms = platform_options();
 $reply = 'mailto:' . rawurlencode($m['email']) . '?subject=' . rawurlencode('Re: your message to ' . setting('site_name', 'Peakilo'));
 ?>
 <div class="page-head">
@@ -12,6 +13,33 @@ $reply = 'mailto:' . rawurlencode($m['email']) . '?subject=' . rawurlencode('Re:
 </div>
 <div class="grid grid-side">
     <div class="grid" style="align-content:start">
+        <?php if ($requested): ?>
+        <section class="card">
+            <div class="card-head"><h2>Creators requested <span class="badge no-dot"><?= count($requested) ?></span></h2><span class="small muted">Picked by the brand on the website</span></div>
+            <div class="table-wrap"><table class="table">
+                <thead><tr><th>Creator</th><th>Followers</th><th>Avg. views</th><th>ER</th><th>Fee range (private)</th></tr></thead>
+                <tbody>
+                <?php foreach ($requested as $r): ?>
+                    <tr>
+                        <td><a class="person" href="<?= e(url('admin/influencers/' . $r['id'])) ?>"><span class="avatar"><?php if ($r['photo']): ?><img src="<?= e(upload_url($r['photo'])) ?>" alt="" loading="lazy"><?php else: ?><?= e(initials($r['full_name'])) ?><?php endif; ?></span><span><b><?= e($r['full_name']) ?></b><small><?= e(creator_code($r['id'])) ?> &middot; <?= e(status_label($r['status'])) ?> &middot; <?= e(implode(', ', array_slice(csv_list($r['niches']), 0, 2))) ?></small></span></a></td>
+                        <td class="nowrap"><b><?= e(short_number($r['total_followers'])) ?></b><div class="small muted" style="font-size:16px"><?php foreach ($platforms as $k => $p): if (!empty($r[$k])): ?><i class="ph-fill <?= e($p['icon']) ?>" title="<?= e($p['label'] . ': ' . short_number($r[$k . '_followers'])) ?>"></i> <?php endif; endforeach; ?></div></td>
+                        <td><?= !empty($r['avg_impressions']) ? e(short_number($r['avg_impressions'])) : '-' ?></td>
+                        <td><?= $r['engagement_rate'] !== null ? e($r['engagement_rate'] + 0) . '%' : '-' ?></td>
+                        <td class="nowrap"><b><?= e(fee_range($r['fee_min'], $r['fee_max'], $r['currency'])) ?></b><?php $rc = rate_card($r['rate_card'] ?? ''); if ($rc): ?><div class="small muted"><?= e(implode(' · ', array_map(function ($k, $v) use ($r) { return rate_card_options()[$k][0] . ' ' . money($v, $r['currency']); }, array_keys($rc), $rc))) ?></div><?php endif; ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table></div>
+            <?php if ($costs): ?>
+                <div class="card-body quote-sum">
+                    <?php foreach ($costs as $cur => $c): ?>
+                        <div><span>Creator cost for one deliverable each (<?= (int) $c['n'] ?> creator<?= $c['n'] > 1 ? 's' : '' ?>, <?= e($cur) ?>)</span><b><?= e(fee_range($c['min'], $c['max'], $cur)) ?></b></div>
+                    <?php endforeach; ?>
+                    <p class="small muted">Add your agency margin, usage rights and extra deliverables, then reply to the brand with a quote.</p>
+                </div>
+            <?php endif; ?>
+        </section>
+        <?php endif; ?>
         <?php if (!empty($m['goal']) || !empty($m['niches'])): ?>
         <section class="card">
             <div class="card-head"><h2>Campaign brief</h2><span class="badge b-new">Brand</span></div>
