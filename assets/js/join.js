@@ -55,7 +55,13 @@
     if (n >= 1e4) return 'Micro';
     return n > 0 ? 'Nano' : '';
   };
-  var val = function (name) { var el = form.elements[name]; return el ? String(el.value || '').trim() : ''; };
+  var val = function (name) {
+    if (name === 'languages') {
+      var ls = form.querySelector('[data-languages]');
+      if (ls) return Array.prototype.filter.call(ls.options, function (o) { return o.selected; }).map(function (o) { return o.value; }).join(', ');
+    }
+    var el = form.elements[name]; return el ? String(el.value || '').trim() : '';
+  };
 
   /* ---------- Profile links ---------- */
   var hostOf = function (v) {
@@ -165,7 +171,8 @@
       var serverPhotoOk = form.dataset.photoOptional === '1';
       check(val('full_name').length >= 2, form.elements.full_name, 'Please enter your full name.');
       check(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val('email')), form.elements.email, 'Enter a valid email address.');
-      check(val('phone') === '' || /^[0-9+()\-\s.]{6,25}$/.test(val('phone')), form.elements.phone, 'Enter a valid phone number.');
+      check(val('phone') !== '', form.elements.phone, 'Add your WhatsApp number so we can send you briefs.');
+      if (val('phone') !== '') check(/^[0-9+()\-\s.]{6,25}$/.test(val('phone')) && val('phone').replace(/\D/g, '').length >= 8, form.elements.phone, 'Enter a valid WhatsApp number with country code.');
       check(val('country') !== '', form.elements.country, 'Tell us which country you are based in.');
       check(photo.files.length > 0 || serverPhotoOk, photo, 'Please add a profile photo.');
     }
@@ -409,7 +416,7 @@
   var feeMin = $('[data-fee-min]'), feeMax = $('[data-fee-max]');
   var drMin = $('[data-dr-min]'), drMax = $('[data-dr-max]');
   var dr = $('[data-dual-range]');
-  var cur = $('[data-currency]');
+  var cur = $('select[data-currency]');
   var feeTouched = feeMin.value !== '' || feeMax.value !== '';
   var scaleMax = function () { return 20000 * (SCALE[cur.value] || 1); };
   var niceRound = function (v) {
@@ -575,9 +582,12 @@
     saveTimer = setTimeout(function () {
       var out = {};
       $$('input, select, textarea').forEach(function (el) {
-        if (!el.name || skip.test(el.name) || el.type === 'range') return;
+        if (!el.name || skip.test(el.name) || el.type === 'range' || el.type === 'file') return;
         if (el.type === 'checkbox' || el.type === 'radio') {
           if (el.checked) (out[el.name] = out[el.name] || []).push(el.value);
+        } else if (el.multiple) {
+          var picked = Array.prototype.filter.call(el.options, function (o) { return o.selected; }).map(function (o) { return o.value; });
+          if (picked.length) out[el.name] = picked;
         } else if (el.value !== '') out[el.name] = el.value;
       });
       out._on = $$('[data-channel].is-on').map(function (c) { return c.dataset.channel; });
@@ -593,11 +603,13 @@
     if (!d || typeof d !== 'object') return false;
     var any = false;
     $$('input, select, textarea').forEach(function (el) {
-      if (!el.name || skip.test(el.name) || el.type === 'range' || !(el.name in d)) return;
+      if (!el.name || skip.test(el.name) || el.type === 'range' || el.type === 'file' || !(el.name in d)) return;
       if (el.type === 'checkbox' || el.type === 'radio') el.checked = [].concat(d[el.name]).indexOf(el.value) !== -1;
+      else if (el.multiple) Array.prototype.forEach.call(el.options, function (o) { o.selected = [].concat(d[el.name]).indexOf(o.value) !== -1; });
       else el.value = d[el.name];
       any = true;
     });
+    $$('select').forEach(function (sel) { if (sel.__picker) sel.__picker.refresh(); });
     if (Array.isArray(d._on)) $$('[data-channel]').forEach(function (ch) { setChannel(ch, d._on.indexOf(ch.dataset.channel) !== -1); });
     if (any) {
       feeTouched = feeMin.value !== '' || feeMax.value !== '';
@@ -610,11 +622,80 @@
   form.addEventListener('input', saveDraft);
   form.addEventListener('change', saveDraft);
   var draftNote = doc$('[data-draft-note]');
-  if (restoreDraft() && draftNote) {
+  var restored = restoreDraft();
+  if (restored && draftNote) {
     draftNote.hidden = false;
     doc$('[data-draft-clear]').addEventListener('click', function () {
       clearDraft();
       window.location.reload();
+    });
+  }
+
+  /* ---------- Currency follows the creator's country ---------- */
+  var countrySel = $('[data-country]');
+  var autoCur = false, curTouched = form.dataset.posted === '1' || restored;
+  var setCur = function (code) {
+    if (!code || cur.value === code || !Array.prototype.some.call(cur.options, function (o) { return o.value === code; })) return;
+    autoCur = true;
+    cur.value = code;
+    cur.dispatchEvent(new Event('change', { bubbles: true }));
+    if (cur.__picker) cur.__picker.refresh();
+    autoCur = false;
+  };
+  cur.addEventListener('change', function () { if (!autoCur) curTouched = true; });
+  if (countrySel) {
+    countrySel.addEventListener('change', function () {
+      var o = countrySel.options[countrySel.selectedIndex];
+      if (!curTouched && o && o.dataset.currency) setCur(o.dataset.currency);
+    });
+  }
+  // A fresh form starts in the visitor's currency (rupees in India).
+  if (!curTouched && !form.dataset.campaign && window.Pk && window.Pk.currency) setCur(window.Pk.currency.get());
+
+  /* ---------- Optional uploads: rate card image, insights screenshot ---------- */
+  $$('[data-file-drop]').forEach(function (drop) {
+    var input = drop.querySelector('[data-file-input]');
+    var nameEl = drop.querySelector('[data-file-name]');
+    var icon = drop.querySelector('.fd-ic');
+    var original = nameEl.textContent, originalIcon = icon.innerHTML;
+    input.addEventListener('change', function () {
+      var f = input.files[0];
+      setError(input, '');
+      if (!f) { nameEl.textContent = original; icon.innerHTML = originalIcon; drop.classList.remove('has-file'); return; }
+      if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { input.value = ''; setError(input, 'Please choose a JPG, PNG or WEBP image.'); return; }
+      if (f.size > 5 * 1024 * 1024) { input.value = ''; setError(input, 'That image is over 5 MB. Please pick a smaller one.'); return; }
+      nameEl.textContent = f.name.length > 38 ? f.name.slice(0, 35) + '...' : f.name;
+      icon.innerHTML = '<img alt="">';
+      icon.firstChild.src = URL.createObjectURL(f);
+      drop.classList.add('has-file');
+    });
+  });
+
+  /* ---------- Intro slide: campaign or network details first ---------- */
+  var intro = doc$('[data-join-intro]');
+  var startBtns = intro ? Array.prototype.slice.call(intro.querySelectorAll('[data-join-start]')) : [];
+  var mainCol = form.closest('.join-main');
+  if (intro && startBtns.length && mainCol) {
+    var skipIntro = form.dataset.posted === '1' || restored || !!doc$('[data-join-errors]');
+    var collapse = function () { intro.classList.add('is-collapsed'); };
+    if (skipIntro) collapse(); else mainCol.classList.add('intro-mode');
+    startBtns.forEach(function (b) {
+      b.addEventListener('click', function () {
+        mainCol.classList.remove('intro-mode');
+        collapse();
+        go(0, false);
+        var top = mainCol.getBoundingClientRect().top + window.pageYOffset - 90;
+        if (window.Pk && window.Pk.lenis) window.Pk.lenis.scrollTo(top, { immediate: true }); else window.scrollTo(0, top);
+        var first = form.elements.full_name;
+        if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 200);
+      });
+    });
+    intro.querySelectorAll('[data-intro-toggle]').forEach(function (t) {
+      t.addEventListener('click', function () {
+        var open = intro.classList.toggle('is-open');
+        t.setAttribute('aria-expanded', open ? 'true' : 'false');
+        t.querySelector('span').textContent = open ? 'Hide details' : 'Show details';
+      });
     });
   }
 

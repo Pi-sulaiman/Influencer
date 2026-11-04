@@ -192,6 +192,11 @@ function schema_migrations()
     $engine = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
     $big = $mysql ? 'BIGINT' : 'INTEGER';
     return [
+        7 => [
+            // Optional uploads on the creator form.
+            'ALTER TABLE influencers ADD COLUMN rate_card_image VARCHAR(255) NULL',
+            'ALTER TABLE influencers ADD COLUMN insights_image VARCHAR(255) NULL',
+        ],
         6 => [
             // Brand logos for the homepage carousel (Admin > Site content > Brand logos).
             "CREATE TABLE IF NOT EXISTS brand_logos (

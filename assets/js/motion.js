@@ -64,6 +64,14 @@
   gsap.registerPlugin(ScrollTrigger);
   document.documentElement.classList.add('gsap-on');
   Pk.gsap = true;
+  // Phones: the address bar showing/hiding fires "resize". Recalculating every
+  // trigger then makes the page jump and can stop you scrolling back to the top.
+  ScrollTrigger.config({ ignoreMobileResize: true, autoRefreshEvents: fine ? 'visibilitychange,DOMContentLoaded,load,resize' : 'visibilitychange,DOMContentLoaded,load' });
+  if (!fine) {
+    var lastW = window.innerWidth;
+    window.addEventListener('orientationchange', function () { setTimeout(function () { ScrollTrigger.refresh(); }, 350); });
+    window.addEventListener('resize', function () { if (Math.abs(window.innerWidth - lastW) > 40) { lastW = window.innerWidth; ScrollTrigger.refresh(); } });
+  }
 
   /* ---------- Smooth scrolling on desktop ---------- */
   if (window.Lenis && fine) {

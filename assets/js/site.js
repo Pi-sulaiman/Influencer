@@ -81,11 +81,16 @@
   };
   document.addEventListener('pk:currency', paintMoney);
 
-  /* ---------- Themed picker (replaces native selects: country, currency) ---------- */
+  /* ---------- Themed picker (replaces native selects: country, language, currency) ----------
+     Works for single and multiple selects. On phones the list opens as a
+     bottom sheet attached to <body>, so no parent can clip it. */
+  var phoneMQ = window.matchMedia('(max-width: 640px)');
+  var pickBackdrop = null;
   Pk.enhancePicker = function (select) {
     if (select.__picker) return select.__picker;
+    var multi = select.multiple;
     var wrap = document.createElement('div');
-    wrap.className = 'pick' + (select.classList.contains('pick-sm') ? ' pick-sm' : '');
+    wrap.className = 'pick' + (select.classList.contains('pick-sm') ? ' pick-sm' : '') + (multi ? ' pick-multi' : '');
     select.parentNode.insertBefore(wrap, select);
     wrap.appendChild(select);
     select.classList.add('pick-native');
@@ -97,25 +102,34 @@
     btn.setAttribute('aria-haspopup', 'listbox');
     btn.setAttribute('aria-expanded', 'false');
     btn.innerHTML = '<span class="pick-label"><b></b><small></small></span><i class="ph-bold ph-caret-down pick-caret" aria-hidden="true"></i>';
+    var titleText = select.getAttribute('data-picker-title') || '';
     if (select.id) {
       btn.id = select.id + '-btn';
       var lab = document.querySelector('label[for="' + select.id + '"]');
-      if (lab) lab.htmlFor = btn.id;
+      if (lab) { lab.htmlFor = btn.id; if (!titleText) titleText = lab.childNodes[0] ? lab.childNodes[0].textContent.trim() : ''; }
     }
     if (select.getAttribute('aria-label')) btn.setAttribute('aria-label', select.getAttribute('aria-label'));
     wrap.appendChild(btn);
     var pop = document.createElement('div');
-    pop.className = 'pick-pop';
+    pop.className = 'pick-pop' + (multi ? ' is-multi' : '');
     pop.hidden = true;
     pop.setAttribute('data-lenis-prevent', '');
+    var head = '<div class="pick-sheet-head"><span class="mm-grab" aria-hidden="true"></span><b></b><button type="button" class="mm-sheet-close" aria-label="Close"><i class="ph-bold ph-x"></i></button></div>';
     var searchable = select.hasAttribute('data-picker-search') || select.options.length > 12;
-    if (searchable) {
-      pop.innerHTML = '<div class="pick-search"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" placeholder="' + (select.getAttribute('data-picker-placeholder') || 'Search') + '" aria-label="Search options"></div>';
-    }
+    pop.innerHTML = head + (searchable ? '<div class="pick-search"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" placeholder="' + (select.getAttribute('data-picker-placeholder') || 'Search') + '" aria-label="Search options"></div>' : '');
+    pop.querySelector('.pick-sheet-head b').textContent = titleText || 'Choose';
     var list = document.createElement('div');
     list.className = 'pick-list';
     list.setAttribute('role', 'listbox');
+    if (multi) list.setAttribute('aria-multiselectable', 'true');
     pop.appendChild(list);
+    if (multi) {
+      var done = document.createElement('div');
+      done.className = 'pick-done';
+      done.innerHTML = '<button type="button" class="btn btn-dark btn-block">Done</button>';
+      pop.appendChild(done);
+      done.firstChild.addEventListener('click', function () { close(true); });
+    }
     wrap.appendChild(pop);
     var opts = Array.prototype.map.call(select.options, function (o) {
       var b = document.createElement('button');
@@ -124,20 +138,38 @@
       b.setAttribute('role', 'option');
       b.dataset.value = o.value;
       b.dataset.search = (o.textContent + ' ' + (o.dataset.sub || '') + ' ' + (o.dataset.code || '')).toLowerCase();
-      b.innerHTML = '<span></span>' + (o.dataset.sub ? '<small></small>' : '');
+      if (o.value === '' && (o.disabled || o.hasAttribute('data-placeholder'))) { b.dataset.ph = '1'; b.hidden = true; }
+      b.innerHTML = '<span></span>' + (o.dataset.sub ? '<small></small>' : '') + (multi ? '<i class="ph-bold ph-check pick-tick" aria-hidden="true"></i>' : '');
       b.firstChild.textContent = o.textContent;
-      if (o.dataset.sub) b.lastChild.textContent = o.dataset.sub;
-      if (o.value === '' && o.disabled) b.hidden = true;
+      if (o.dataset.sub) b.querySelector('small').textContent = o.dataset.sub;
       list.appendChild(b);
-      b.addEventListener('click', function () { choose(o.value); close(true); });
+      b.addEventListener('click', function () {
+        if (multi) {
+          o.selected = !o.selected;
+          refresh();
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        } else {
+          choose(o.value);
+          close(true);
+        }
+      });
       return b;
     });
     var refresh = function () {
+      var label = btn.querySelector('b'), small = btn.querySelector('small');
+      if (multi) {
+        var picked = Array.prototype.filter.call(select.options, function (o) { return o.selected && o.value !== ''; }).map(function (o) { return o.textContent; });
+        label.textContent = picked.length ? picked.slice(0, 3).join(', ') + (picked.length > 3 ? ' +' + (picked.length - 3) : '') : (select.getAttribute('data-placeholder') || 'Choose');
+        small.textContent = '';
+        btn.classList.toggle('is-empty', !picked.length);
+        opts.forEach(function (b, i) { b.setAttribute('aria-selected', select.options[i].selected ? 'true' : 'false'); });
+        return;
+      }
       var o = select.options[select.selectedIndex];
-      btn.querySelector('b').textContent = o ? o.textContent : '';
-      btn.querySelector('small').textContent = o && o.dataset.sub && !select.classList.contains('pick-sm') ? o.dataset.sub : '';
+      label.textContent = o ? o.textContent : '';
+      small.textContent = o && o.dataset.sub && o.value !== '' && !select.classList.contains('pick-sm') ? o.dataset.sub : '';
       btn.classList.toggle('is-empty', !o || o.value === '');
-      opts.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.value === select.value ? 'true' : 'false'); });
+      opts.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.value === select.value && b.dataset.value !== '' ? 'true' : 'false'); });
     };
     var choose = function (v) {
       if (select.value === v) return;
@@ -145,18 +177,39 @@
       refresh();
       select.dispatchEvent(new Event('change', { bubbles: true }));
     };
-    var onDoc = function (e) { if (!wrap.contains(e.target)) close(false); };
+    var sheet = false;
+    var onDoc = function (e) { if (!wrap.contains(e.target) && !pop.contains(e.target)) close(false); };
     var open = function () {
       document.querySelectorAll('.pick.is-open').forEach(function (p) { if (p !== wrap && p.__close) p.__close(false); });
+      sheet = phoneMQ.matches;
+      if (sheet) {
+        if (!pickBackdrop) {
+          pickBackdrop = document.createElement('div');
+          pickBackdrop.className = 'mm-backdrop';
+          pickBackdrop.hidden = true;
+          document.body.appendChild(pickBackdrop);
+        }
+        pickBackdrop.hidden = false;
+        pickBackdrop.onclick = function () { close(true); };
+        pop.classList.add('is-sheet');
+        document.body.appendChild(pop);
+        doc.classList.add('sheet-open');
+      }
       pop.hidden = false;
       wrap.classList.add('is-open');
       btn.setAttribute('aria-expanded', 'true');
-      var r = btn.getBoundingClientRect();
-      wrap.classList.toggle('is-up', window.innerHeight - r.bottom < 300 && r.top > window.innerHeight - r.bottom);
-      var input = pop.querySelector('input');
+      if (!sheet) {
+        var r = btn.getBoundingClientRect();
+        wrap.classList.toggle('is-up', window.innerHeight - r.bottom < 320 && r.top > window.innerHeight - r.bottom);
+      }
+      var input = pop.querySelector('.pick-search input');
       var sel = list.querySelector('[aria-selected="true"]');
       if (sel) sel.scrollIntoView({ block: 'nearest' });
-      (input || sel || opts[0]).focus();
+      (sheet ? (sel || opts.filter(function (b) { return !b.hidden; })[0]) : (input || sel || opts[0])).focus({ preventScroll: true });
+      if (window.gsap && !reduce) {
+        if (sheet) window.gsap.fromTo(pop, { yPercent: 100 }, { yPercent: 0, duration: 0.4, ease: 'power3.out' });
+        else window.gsap.fromTo(pop, { opacity: 0, y: -6 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' });
+      }
       document.addEventListener('mousedown', onDoc);
     };
     var close = function (focusBtn) {
@@ -165,14 +218,22 @@
       wrap.classList.remove('is-open');
       btn.setAttribute('aria-expanded', 'false');
       document.removeEventListener('mousedown', onDoc);
-      var input = pop.querySelector('input');
+      if (sheet) {
+        pop.classList.remove('is-sheet');
+        wrap.appendChild(pop);
+        if (pickBackdrop) pickBackdrop.hidden = true;
+        doc.classList.remove('sheet-open');
+        if (window.gsap) window.gsap.set(pop, { clearProps: 'transform' });
+      }
+      var input = pop.querySelector('.pick-search input');
       if (input) { input.value = ''; filter(''); }
-      if (focusBtn) btn.focus();
+      if (focusBtn) btn.focus({ preventScroll: true });
     };
+    pop.querySelector('.mm-sheet-close').addEventListener('click', function () { close(true); });
     wrap.__close = close;
     var filter = function (q) {
       q = q.toLowerCase().trim();
-      opts.forEach(function (b) { b.hidden = q !== '' && b.dataset.search.indexOf(q) === -1; });
+      opts.forEach(function (b) { b.hidden = b.dataset.ph === '1' || (q !== '' && b.dataset.search.indexOf(q) === -1); });
     };
     btn.addEventListener('click', function () { pop.hidden ? open() : close(true); });
     btn.addEventListener('keydown', function (e) { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); open(); } });
@@ -185,11 +246,11 @@
       if (e.key === 'Enter' && document.activeElement.tagName === 'INPUT' && visible[0]) { e.preventDefault(); visible[0].click(); }
       if (e.key === 'Tab') close(false);
     });
-    var input = pop.querySelector('input');
+    var input = pop.querySelector('.pick-search input');
     if (input) input.addEventListener('input', function () { filter(input.value); });
     select.addEventListener('change', refresh);
     refresh();
-    select.__picker = { refresh: refresh, open: open, close: close };
+    select.__picker = { refresh: refresh, open: open, close: close, button: btn };
     return select.__picker;
   };
   $$('select[data-picker]').forEach(Pk.enhancePicker);

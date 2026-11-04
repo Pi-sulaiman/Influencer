@@ -62,8 +62,6 @@ $socials = [
             </div>
         </div>
 
-        <div class="footer-word" aria-hidden="true"><?= mark_svg('') ?><span>peakilo</span></div>
-
         <div class="footer-bottom">
             <span>&copy; <?= date('Y') ?> <?= e(setting('site_name', 'Peakilo')) ?>. All rights reserved.</span>
             <nav aria-label="Legal">
@@ -72,5 +70,14 @@ $socials = [
                 <a href="<?= e(url('sitemap.xml')) ?>">Sitemap</a>
             </nav>
         </div>
+    </div>
+
+    <!-- Full-width wordmark: top half solid, bottom half fades and blurs away. -->
+    <div class="footer-mark" aria-hidden="true">
+        <svg viewBox="0 0 1000 176" preserveAspectRatio="xMidYMax meet" data-footer-mark>
+            <path class="fm-mark" transform="translate(4 0) scale(1.95)" d="M0 0H28L62 40L52 52H62L72 40L38 0H66L100 40L78 66H40L24 90H0L34 40Z"/>
+            <text class="fm-word" x="214" y="176" textLength="782" lengthAdjust="spacingAndGlyphs">peakilo</text>
+        </svg>
+        <span class="fm-blur b1"></span><span class="fm-blur b2"></span><span class="fm-blur b3"></span>
     </div>
 </footer>

@@ -105,9 +105,9 @@ $matchData = [
             </form>
             <div class="hero2-links" data-hero-in>
                 <?php if ($creators): ?>
-                    <a class="hero2-creator-link" href="<?= e(url('talent')) ?>" data-mm-browse data-base="<?= e(url('talent')) ?>"><i class="ph-bold ph-users-three" aria-hidden="true"></i> <b>Browse matching creators</b> <i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+                    <a class="hero2-creator-link" href="<?= e(url('talent')) ?>" data-mm-browse data-base="<?= e(url('talent')) ?>"><span class="hl-ic"><i class="ph-bold ph-users-three" aria-hidden="true"></i></span><span class="hl-txt"><small>For brands</small> <b>Browse matching creators</b></span><i class="ph-bold ph-arrow-right hl-arrow" aria-hidden="true"></i></a>
                 <?php endif; ?>
-                <a class="hero2-creator-link" href="<?= e(url('join')) ?>">Are you a creator? <b>Join as a creator</b> <i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+                <a class="hero2-creator-link" href="<?= e(url('join')) ?>"><span class="hl-ic"><i class="ph-bold ph-camera" aria-hidden="true"></i></span><span class="hl-txt"><small>Are you a creator?</small> <b>Join as a creator</b></span><i class="ph-bold ph-arrow-right hl-arrow" aria-hidden="true"></i></a>
             </div>
         </div>
 
@@ -187,11 +187,50 @@ $matchData = [
             </div>
         </div>
 
+        <?php $avatars = array_slice($creators, 0, 5); ?>
         <div class="aud-panel" id="panel-brands" role="tabpanel" aria-labelledby="tab-brands" data-reveal>
-            <figure class="aud-media" data-clip>
-                <img src="<?= e(site_image('home_brands')) ?>" alt="Brand lead in a suit holding a coffee" loading="lazy" width="1000" height="1080" data-parallax-img>
-                <figcaption class="badge-float"><i class="ph-fill ph-seal-check" aria-hidden="true"></i> Every creator is vetted before you see them</figcaption>
-            </figure>
+            <!-- Interactive campaign planner (example figures, no photos needed) -->
+            <div class="aw aw-brand" data-planner>
+                <div class="aw-head"><span class="aw-title"><i class="ph-bold ph-sparkle" aria-hidden="true"></i> Campaign planner</span><span class="aw-pill">Example</span></div>
+                <div class="aw-row">
+                    <span class="aw-label" id="pl-goal">Goal</span>
+                    <div class="aw-seg" role="radiogroup" aria-labelledby="pl-goal" data-pl-group="goal">
+                        <button type="button" role="radio" aria-checked="false" data-val="awareness">Awareness</button>
+                        <button type="button" role="radio" aria-checked="true" data-val="launch">Launch</button>
+                        <button type="button" role="radio" aria-checked="false" data-val="sales">Sales</button>
+                    </div>
+                </div>
+                <div class="aw-row">
+                    <span class="aw-label" id="pl-size">Creator size</span>
+                    <div class="aw-seg" role="radiogroup" aria-labelledby="pl-size" data-pl-group="size">
+                        <button type="button" role="radio" aria-checked="false" data-val="nano">Nano</button>
+                        <button type="button" role="radio" aria-checked="true" data-val="micro">Micro</button>
+                        <button type="button" role="radio" aria-checked="false" data-val="macro">Macro</button>
+                    </div>
+                </div>
+                <div class="aw-short">
+                    <div class="aw-avatars" aria-hidden="true">
+                        <?php for ($k = 0; $k < 5; $k++): $av = $avatars[$k] ?? null; ?>
+                            <span class="aw-av" data-av><?php if ($av): ?><img src="<?= e($av['photo']) ?>" alt="" loading="lazy" width="44" height="44"<?= photo_fallback_attr($av) ?>><?php else: ?><i class="ph-bold <?= e(array_values($catalog)[$k]['icon']) ?>"></i><?php endif; ?><em><i class="ph-bold ph-check"></i></em></span>
+                        <?php endfor; ?>
+                    </div>
+                    <div class="aw-short-txt"><b><span data-pl="creators">10</span> creators shortlisted</b><small>Vetted for audience fit and brand safety</small></div>
+                </div>
+                <div class="aw-chart" aria-hidden="true">
+                    <svg viewBox="0 0 300 96" preserveAspectRatio="none">
+                        <defs><linearGradient id="awGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#EF3B2A" stop-opacity=".32"/><stop offset="1" stop-color="#EF3B2A" stop-opacity="0"/></linearGradient></defs>
+                        <path class="aw-area" data-pl-area d=""/>
+                        <path class="aw-line" data-pl-line d=""/>
+                        <circle class="aw-dot" data-pl-dot r="5" cx="0" cy="0"/>
+                    </svg>
+                    <span class="aw-peak" data-pl-peak>Peak week</span>
+                </div>
+                <div class="aw-kpis">
+                    <div><b data-pl="reach">0</b><span>Est. reach</span></div>
+                    <div><b data-pl="eng">0</b><span>Engagements</span></div>
+                    <div><b data-pl="weeks">0</b><span>Weeks to launch</span></div>
+                </div>
+            </div>
             <div class="aud-body">
                 <h3 class="h3">Launch with creators your customers already trust.</h3>
                 <ul class="aud-list">
@@ -204,10 +243,42 @@ $matchData = [
         </div>
 
         <div class="aud-panel" id="panel-creators" role="tabpanel" aria-labelledby="tab-creators" hidden>
-            <figure class="aud-media">
-                <img src="<?= e(site_image('home_creators')) ?>" alt="Creator in sunglasses posing for a photo" loading="lazy" width="1000" height="1080">
-                <figcaption class="badge-float"><i class="ph-fill ph-currency-circle-dollar" aria-hidden="true"></i> Free to join. You set your own rate range.</figcaption>
-            </figure>
+            <!-- Interactive earnings guide (rough guide, not an offer) -->
+            <div class="aw aw-creator" data-earn>
+                <div class="aw-head"><span class="aw-title"><i class="ph-bold ph-wallet" aria-hidden="true"></i> What could you earn?</span><span class="aw-pill">Guide</span></div>
+                <div class="aw-row aw-col">
+                    <div class="aw-label-row"><label class="aw-label" for="earn-f">Your followers</label><output for="earn-f" data-earn-f>50K</output></div>
+                    <input class="range aw-range" id="earn-f" type="range" min="0" max="100" step="1" value="52" data-earn-range>
+                    <div class="range-scale"><span>1K</span><span>50K</span><span>2M</span></div>
+                </div>
+                <div class="aw-row aw-col">
+                    <span class="aw-label" id="earn-n">Niche</span>
+                    <div class="aw-chips" role="radiogroup" aria-labelledby="earn-n" data-earn-group="niche">
+                        <?php foreach (['Beauty' => 1.15, 'Tech' => 1.25, 'Food' => 1, 'Travel' => 1.1, 'Finance' => 1.4, 'Gaming' => 1.05] as $nn => $mult): ?>
+                            <button type="button" role="radio" aria-checked="<?= $nn === 'Beauty' ? 'true' : 'false' ?>" data-val="<?= $mult ?>"><?= e($nn) ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="aw-row aw-col">
+                    <span class="aw-label" id="earn-c">Content</span>
+                    <div class="aw-seg" role="radiogroup" aria-labelledby="earn-c" data-earn-group="type">
+                        <button type="button" role="radio" aria-checked="true" data-val="10">Reel</button>
+                        <button type="button" role="radio" aria-checked="false" data-val="4">Story</button>
+                        <button type="button" role="radio" aria-checked="false" data-val="22">YouTube video</button>
+                    </div>
+                </div>
+                <div class="aw-result" aria-live="polite">
+                    <span>Suggested rate per post</span>
+                    <b data-earn-out>-</b>
+                    <div class="aw-meter" aria-hidden="true"><span data-earn-bar></span></div>
+                </div>
+                <ol class="aw-steps" data-earn-steps aria-label="How you get paid">
+                    <li><i class="ph-bold ph-envelope-open"></i>Brief</li>
+                    <li><i class="ph-bold ph-check-circle"></i>Approved</li>
+                    <li><i class="ph-bold ph-upload-simple"></i>Posted</li>
+                    <li><i class="ph-bold ph-hand-coins"></i>Paid</li>
+                </ol>
+            </div>
             <div class="aud-body">
                 <h3 class="h3">Paid campaigns that fit your content.</h3>
                 <ul class="aud-list">
@@ -257,17 +328,76 @@ $matchData = [
                 <h3>Paid amplification</h3>
                 <p>Whitelisted creator ads that scale your best performing posts.</p>
             </article>
+            <?php
+            // Example report data (illustrative, labelled as an example on the page).
+            $reach = [0.32, 0.41, 0.55, 0.62, 0.9, 1.35, 1.92, 2.4];   // millions
+            $clicks = [4, 6, 9, 12, 19, 27, 38, 48];                  // thousands
+            $W = 520; $H = 170; $pl = 8; $pr = 8; $pt = 26; $pb = 26;
+            $px = function ($i) use ($W, $pl, $pr, $reach) { return $pl + $i * ($W - $pl - $pr) / (count($reach) - 1); };
+            $py = function ($v, $max) use ($H, $pt, $pb) { return $H - $pb - $v / $max * ($H - $pt - $pb); };
+            $path = function ($arr, $max) use ($px, $py) {
+                $d = '';
+                foreach ($arr as $i => $v) {
+                    $x = $px($i); $y = $py($v, $max);
+                    if ($i === 0) { $d .= 'M' . round($x, 1) . ' ' . round($y, 1); continue; }
+                    $x0 = $px($i - 1); $y0 = $py($arr[$i - 1], $max); $cx = ($x0 + $x) / 2;
+                    $d .= ' C' . round($cx, 1) . ' ' . round($y0, 1) . ' ' . round($cx, 1) . ' ' . round($y, 1) . ' ' . round($x, 1) . ' ' . round($y, 1);
+                }
+                return $d;
+            };
+            $reachD = $path($reach, 2.6);
+            $clicksD = $path($clicks, 52);
+            $peakX = $px(7); $peakY = $py(2.4, 2.6);
+            ?>
             <article class="cell cell-wide" data-spotlight data-reveal>
-                <div>
-                    <span class="ic"><i class="ph-bold ph-chart-bar" aria-hidden="true"></i></span>
+                <div class="rep-copy">
+                    <span class="ic"><i class="ph-bold ph-chart-line-up" aria-hidden="true"></i></span>
                     <h3>Reporting that shows the peak</h3>
-                    <p>Live tracking during the campaign and a clear wrap report after it, with reach, engagement, clicks and sales side by side.</p>
+                    <p>Live tracking during the campaign and a clear wrap report after it, with reach, engagement and clicks side by side.</p>
                 </div>
-                <div class="bars" aria-hidden="true">
-                    <?php foreach ([28, 36, 32, 48, 44, 60, 56, 72, 68, 92] as $i => $h): ?>
-                        <span style="--h:<?= $h ?>%;--i:<?= $i ?>"<?= $i === 9 ? ' data-label="Peak week"' : '' ?>></span>
+                <div class="rep" data-rep>
+                    <div class="rep-top">
+                        <div class="rep-kpi"><b><span data-count="2.4" data-decimals="1">0</span><em>M</em></b><span>Reach</span></div>
+                        <div class="rep-kpi"><b><span data-count="6.2" data-decimals="1">0</span><em>%</em></b><span>Engagement</span></div>
+                        <div class="rep-kpi"><b><span data-count="48">0</span><em>K</em></b><span>Link clicks</span></div>
+                        <span class="aw-pill rep-pill">Example report</span>
+                    </div>
+                    <div class="rep-chart">
+                        <svg viewBox="0 0 <?= $W ?> <?= $H ?>" preserveAspectRatio="none" aria-hidden="true">
+                            <defs><linearGradient id="repGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#EF3B2A" stop-opacity=".3"/><stop offset="1" stop-color="#EF3B2A" stop-opacity="0"/></linearGradient></defs>
+                            <?php for ($g = 0; $g < 4; $g++): $gy = $pt + $g * ($H - $pt - $pb) / 3; ?><line class="rep-grid" x1="0" x2="<?= $W ?>" y1="<?= round($gy, 1) ?>" y2="<?= round($gy, 1) ?>"/><?php endfor; ?>
+                            <path class="rep-area" d="<?= $reachD ?> L<?= $W - $pr ?> <?= $H - $pb ?> L<?= $pl ?> <?= $H - $pb ?> Z"/>
+                            <path class="rep-line2" d="<?= $clicksD ?>" pathLength="1"/>
+                            <path class="rep-line" d="<?= $reachD ?>" pathLength="1"/>
+                            <?php foreach ($reach as $i => $v): ?><circle class="rep-pt" cx="<?= round($px($i), 1) ?>" cy="<?= round($py($v, 2.6), 1) ?>" r="4" style="--i:<?= $i ?>"/><?php endforeach; ?>
+                        </svg>
+                        <span class="rep-peak" style="left:<?= round($peakX / $W * 100, 2) ?>%;top:<?= round($peakY / $H * 100, 2) ?>%">Peak week</span>
+                        <div class="rep-hits" data-rep-hits>
+                            <?php foreach ($reach as $i => $v): ?><span data-x="<?= round($px($i) / $W * 100, 2) ?>" data-y="<?= round($py($v, 2.6) / $H * 100, 2) ?>" data-label="Week <?= $i + 1 ?>" data-reach="<?= $v ?>M" data-clicks="<?= $clicks[$i] ?>K"></span><?php endforeach; ?>
+                        </div>
+                        <div class="rep-tip" data-rep-tip hidden></div>
+                    </div>
+                    <div class="rep-x" aria-hidden="true"><?php for ($i = 1; $i <= 8; $i++): ?><span>W<?= $i ?></span><?php endfor; ?></div>
+                    <div class="rep-legend"><span><i class="lg-reach"></i>Reach</span><span><i class="lg-clicks"></i>Link clicks</span></div>
+                </div>
+            </article>
+            <?php $mix = [['Instagram', 46, '#EF3B2A', 'ph-instagram-logo'], ['YouTube', 24, '#10131C', 'ph-youtube-logo'], ['TikTok', 22, '#FF6B57', 'ph-tiktok-logo'], ['Other', 8, '#FFAE92', 'ph-dots-three-circle']]; ?>
+            <article class="cell cell-mix" data-spotlight data-reveal>
+                <div class="mix-head"><h3>Platform mix</h3><span class="aw-pill">Example</span></div>
+                <div class="mix-donut" data-mix>
+                    <svg viewBox="0 0 42 42" aria-hidden="true">
+                        <circle cx="21" cy="21" r="15.915" fill="none" class="mix-track" stroke-width="6"/>
+                        <?php $off = 25; foreach ($mix as $k => $m): ?>
+                            <circle cx="21" cy="21" r="15.915" fill="none" stroke="<?= $m[2] ?>" stroke-width="6" class="mix-seg" data-seg="<?= $k ?>" style="--len:<?= $m[1] ?>;--i:<?= $k ?>" stroke-dasharray="<?= $m[1] ?> <?= 100 - $m[1] ?>" stroke-dashoffset="<?= $off ?>"/>
+                        <?php $off -= $m[1]; endforeach; ?>
+                    </svg>
+                    <div class="mix-center"><b data-mix-val>46%</b><span data-mix-name>Instagram</span></div>
+                </div>
+                <ul class="mix-legend">
+                    <?php foreach ($mix as $k => $m): ?>
+                        <li data-seg-key="<?= $k ?>" data-name="<?= e($m[0]) ?>" data-val="<?= $m[1] ?>%"><i style="background:<?= $m[2] ?>"></i><?= e($m[0]) ?><b><?= $m[1] ?>%</b></li>
                     <?php endforeach; ?>
-                </div>
+                </ul>
             </article>
         </div>
     </div>
@@ -328,7 +458,7 @@ $matchData = [
             <h2 class="h2" data-split>Creators for every niche your customers follow.</h2>
             <a class="link-arrow" href="<?= e(url('influencers')) ?>">Explore all niches <i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
         </div>
-        <div class="niche-grid" data-niche-grid>
+        <div class="niche-grid" data-niche-grid data-collapse>
             <?php foreach ($catalog as $slug => $n): $cnt = $counts[$n['name']]['any'] ?? 0; ?>
                 <a class="niche-tile" href="<?= e(url('influencers/' . $slug)) ?>" data-spotlight>
                     <span class="nt-ic"><i class="ph-bold <?= e($n['icon']) ?>" aria-hidden="true"></i></span>
@@ -338,6 +468,7 @@ $matchData = [
                 </a>
             <?php endforeach; ?>
         </div>
+        <button class="btn btn-outline btn-lg niche-more" type="button" data-niche-more aria-expanded="false" data-more="Show all <?= count($catalog) ?> niches" data-less="Show fewer niches"><span>Show all <?= count($catalog) ?> niches</span> <i class="ph-bold ph-caret-down" aria-hidden="true"></i></button>
     </div>
 </section>
 

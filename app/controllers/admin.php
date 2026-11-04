@@ -231,8 +231,10 @@ function admin_influencers_bulk()
             flash('success', 'Removed from the website.');
             break;
         case 'delete':
-            foreach (all("SELECT photo FROM influencers WHERE id IN ($in)", $ids) as $r) {
+            foreach (all("SELECT photo, rate_card_image, insights_image FROM influencers WHERE id IN ($in)", $ids) as $r) {
                 delete_upload($r['photo']);
+                delete_upload($r['rate_card_image']);
+                delete_upload($r['insights_image']);
             }
             q("DELETE FROM applications WHERE influencer_id IN ($in)", $ids);
             q("DELETE FROM influencers WHERE id IN ($in)", $ids);
@@ -350,6 +352,8 @@ function admin_influencer_delete($params)
     $inf = one('SELECT * FROM influencers WHERE id = ?', [(int) $params['id']]);
     if ($inf) {
         delete_upload($inf['photo']);
+        delete_upload($inf['rate_card_image'] ?? null);
+        delete_upload($inf['insights_image'] ?? null);
         q('DELETE FROM applications WHERE influencer_id = ?', [$inf['id']]);
         q('DELETE FROM influencers WHERE id = ?', [$inf['id']]);
         flash('success', $inf['full_name'] . ' was deleted.');
@@ -790,6 +794,11 @@ function settings_fields()
             'youtube_url' => ['YouTube URL', 'url'],
             'tiktok_url' => ['TikTok URL', 'url'],
             'x_url' => ['X URL', 'url'],
+        ],
+        'Creator community' => [
+            'broadcast_whatsapp' => ['WhatsApp channel link (shown after a creator signs up)', 'url'],
+            'broadcast_instagram' => ['Instagram broadcast channel link', 'url'],
+            'broadcast_telegram' => ['Telegram channel link', 'url'],
         ],
         'SEO and analytics' => [
             'ga_id' => ['Google Analytics 4 measurement ID (G-XXXXXXX)', 'text'],

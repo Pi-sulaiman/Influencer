@@ -11,8 +11,6 @@
 function site_image_slots()
 {
     return [
-        'home_brands'    => ['Homepage: "For brands" panel', 'https://picsum.photos/id/856/1000/1080', '1000 x 1080, portrait'],
-        'home_creators'  => ['Homepage: "For creators" panel', 'https://picsum.photos/id/64/1000/1080', '1000 x 1080, portrait'],
         'home_campaigns' => ['Homepage: main services tile', 'https://picsum.photos/id/836/1200/1100', '1200 x 1100'],
         'home_talent'    => ['Homepage: talent management tile', 'https://picsum.photos/id/1027/700/600', '700 x 600'],
         'about'          => ['About page', 'https://picsum.photos/id/1005/1100/880', '1100 x 880, landscape'],
