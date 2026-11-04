@@ -65,10 +65,16 @@ function campaign_link($params)
 
 function join_fields()
 {
-    return ['full_name', 'email', 'phone', 'city', 'country', 'gender', 'languages', 'primary_platform',
-        'instagram', 'instagram_followers', 'youtube', 'youtube_followers', 'tiktok', 'tiktok_followers',
-        'facebook', 'facebook_followers', 'x', 'x_followers', 'website', 'engagement_rate',
+    $fields = ['full_name', 'display_name', 'email', 'phone', 'city', 'country', 'gender', 'languages', 'primary_platform',
+        'website', 'engagement_rate', 'monthly_impressions', 'audience_country', 'audience_age', 'audience_gender', 'past_brands',
         'fee_min', 'fee_max', 'currency', 'fee_notes', 'bio', 'pitch'];
+    foreach (array_keys(platform_options()) as $p) {
+        array_push($fields, $p, $p . '_followers', $p . '_avg_views');
+    }
+    foreach (array_keys(rate_card_options()) as $k) {
+        $fields[] = 'rate_' . $k;
+    }
+    return $fields;
 }
 
 function join_form()
@@ -90,6 +96,7 @@ function join_form()
     $data['content_types'] = [];
     $data['consent_terms'] = '';
     $data['consent_feature'] = '';
+    $data['barter_ok'] = '';
 
     if (is_post()) {
         foreach (join_fields() as $f) {
@@ -100,6 +107,9 @@ function join_form()
         $data['content_types'] = array_intersect(input_array('content_types'), content_type_options());
         $data['consent_terms'] = input('consent_terms') ? '1' : '';
         $data['consent_feature'] = input('consent_feature') ? '1' : '';
+        $data['barter_ok'] = input('barter_ok') ? '1' : '';
+        if (!in_array($data['audience_age'], audience_age_options(), true)) $data['audience_age'] = '';
+        if (!in_array($data['audience_gender'], audience_gender_options(), true)) $data['audience_gender'] = '';
 
         // Honeypot: bots fill hidden fields. Pretend success.
         if (input('company_site') !== '') {
@@ -112,14 +122,26 @@ function join_form()
         if ($data['country'] === '') $errors['country'] = 'Tell us which country you are based in.';
 
         $hasChannel = false;
-        foreach (array_keys(platform_options()) as $p) {
-            if ($data[$p] !== '') $hasChannel = true;
+        foreach (platform_options() as $p => $meta) {
+            if ($data[$p] === '') continue;
+            $hasChannel = true;
+            if (!profile_link_matches($p, $data[$p])) $errors[$p] = 'That link does not look like a ' . $meta['label'] . ' profile.';
+            if (!parse_count($data[$p . '_followers'])) $errors[$p . '_followers'] = 'Add your ' . $meta['label'] . ' ' . ($p === 'youtube' ? 'subscriber' : 'follower') . ' count.';
         }
         if (!$hasChannel) $errors['channels'] = 'Add at least one social channel.';
         if (!$data['niches']) $errors['niches'] = 'Pick at least one niche.';
 
+        // Rate card (optional). When the min/max range is left empty it is
+        // filled from the lowest and highest rate on the card.
+        $rates = [];
+        foreach (array_keys(rate_card_options()) as $k) {
+            $v = to_money_or_null($data['rate_' . $k]);
+            if ($v !== null && $v > 0) $rates[$k] = $v;
+        }
         $feeMin = to_money_or_null($data['fee_min']);
         $feeMax = to_money_or_null($data['fee_max']);
+        if ($rates && $feeMin === null) $feeMin = min($rates);
+        if ($rates && $feeMax === null) $feeMax = max($rates);
         if ($feeMin === null) $errors['fee_min'] = 'Enter your minimum fee.';
         if ($feeMax === null) $errors['fee_max'] = 'Enter your maximum fee.';
         if ($feeMin !== null && $feeMax !== null && $feeMax < $feeMin) $errors['fee_max'] = 'Maximum fee should be equal to or higher than the minimum.';
@@ -149,6 +171,7 @@ function join_form()
             $followers = 0;
             $row = [
                 'full_name' => $data['full_name'],
+                'display_name' => $data['display_name'] ?: null,
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?: null,
                 'city' => $data['city'] ?: null,
@@ -164,18 +187,32 @@ function join_form()
                 'fee_max' => $feeMax,
                 'currency' => $data['currency'],
                 'fee_notes' => $data['fee_notes'] ?: null,
+                'rate_card' => $rates ? json_encode($rates) : null,
+                'barter_ok' => $data['barter_ok'] ? 1 : 0,
+                'monthly_impressions' => parse_count($data['monthly_impressions']),
+                'audience_country' => $data['audience_country'] ?: null,
+                'audience_age' => $data['audience_age'] ?: null,
+                'audience_gender' => $data['audience_gender'] ?: null,
+                'past_brands' => $data['past_brands'] !== '' ? mb_substr($data['past_brands'], 0, 500) : null,
                 'bio' => $data['bio'] ?: null,
                 'consent_feature' => $data['consent_feature'] ? 1 : 0,
                 'ip_hash' => ip_hash(),
                 'updated_at' => now(),
             ];
+            $impressions = 0;
             foreach (array_keys(platform_options()) as $p) {
-                $row[$p] = $data[$p] ?: null;
-                $count = $data[$p] !== '' ? parse_count($data[$p . '_followers']) : null;
+                $on = $data[$p] !== '';
+                $row[$p] = $on ? $data[$p] : null;
+                $count = $on ? parse_count($data[$p . '_followers']) : null;
+                $views = $on ? parse_count($data[$p . '_avg_views']) : null;
                 $row[$p . '_followers'] = $count;
+                $row[$p . '_avg_views'] = $views;
                 $followers += (int) $count;
+                $impressions += (int) $views;
             }
             $row['total_followers'] = $followers;
+            // Combined average impressions per post across every channel.
+            $row['avg_impressions'] = $impressions ?: null;
             if (!$row['primary_platform']) {
                 foreach (array_keys(platform_options()) as $p) {
                     if ($row[$p]) { $row['primary_platform'] = $p; break; }
@@ -220,7 +257,7 @@ function join_form()
 
             send_mail(setting('contact_email'), 'New creator: ' . $data['full_name'] . ($campaign ? ' (' . $campaign['title'] . ')' : ''),
                 "{$data['full_name']} just " . ($existing ? 'updated their profile' : 'joined the creator network') . ".\n"
-                . "Email: {$data['email']}\nFollowers: " . number_format($followers) . "\nFee: " . fee_range($feeMin, $feeMax, $data['currency']) . "\n"
+                . "Email: {$data['email']}\nFollowers: " . number_format($followers) . "\nAvg. impressions per post: " . number_format($impressions) . "\nFee: " . fee_range($feeMin, $feeMax, $data['currency']) . "\n"
                 . ($campaign ? "Campaign: {$campaign['title']}\n" : '')
                 . "\nView profile: " . abs_url('admin/influencers/' . $influencerId));
 
@@ -229,7 +266,8 @@ function join_form()
         }
     }
 
-    render('join/form', compact('campaign', 'data', 'errors'), [
+    $posted = is_post();
+    render('join/form', compact('campaign', 'data', 'errors', 'posted'), [
         'title' => $campaign ? 'Apply: ' . $campaign['title'] : 'Join the Creator Network',
         'description' => $campaign
             ? str_limit($campaign['description'] ?: 'Apply to this Peakilo creator campaign.', 160)

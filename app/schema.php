@@ -190,7 +190,28 @@ function schema_migrations()
     $mysql = db_driver() === 'mysql';
     $id = $mysql ? 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
     $engine = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
+    $big = $mysql ? 'BIGINT' : 'INTEGER';
     return [
+        4 => [
+            // Richer creator profiles for agencies: public name, average views
+            // per platform, monthly impressions, audience and a rate card.
+            'ALTER TABLE influencers ADD COLUMN display_name VARCHAR(160) NULL',
+            'ALTER TABLE influencers ADD COLUMN instagram_avg_views INT NULL',
+            'ALTER TABLE influencers ADD COLUMN youtube_avg_views INT NULL',
+            'ALTER TABLE influencers ADD COLUMN tiktok_avg_views INT NULL',
+            'ALTER TABLE influencers ADD COLUMN facebook_avg_views INT NULL',
+            'ALTER TABLE influencers ADD COLUMN x_avg_views INT NULL',
+            "ALTER TABLE influencers ADD COLUMN avg_impressions $big NULL",
+            "ALTER TABLE influencers ADD COLUMN monthly_impressions $big NULL",
+            'ALTER TABLE influencers ADD COLUMN audience_country VARCHAR(120) NULL',
+            'ALTER TABLE influencers ADD COLUMN audience_age VARCHAR(30) NULL',
+            'ALTER TABLE influencers ADD COLUMN audience_gender VARCHAR(30) NULL',
+            'ALTER TABLE influencers ADD COLUMN past_brands VARCHAR(500) NULL',
+            'ALTER TABLE influencers ADD COLUMN rate_card TEXT NULL',
+            'ALTER TABLE influencers ADD COLUMN barter_ok INT NOT NULL DEFAULT 0',
+            // Creators a brand picked from the public roster (comma separated ids).
+            'ALTER TABLE messages ADD COLUMN creator_ids TEXT NULL',
+        ],
         3 => [
             'ALTER TABLE messages ADD COLUMN creator_ref VARCHAR(190) NULL',
             'ALTER TABLE messages ADD COLUMN target_country VARCHAR(4) NULL',

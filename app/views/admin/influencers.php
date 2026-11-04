@@ -38,7 +38,7 @@ $moreOpen = $f['niche'] || $f['platform'] || $f['country'] || $f['min_followers'
             </select></div>
         <div class="field"><label for="fs">Sort by</label>
             <select class="select" id="fs" name="sort">
-                <?php foreach (['newest' => 'Newest first', 'oldest' => 'Oldest first', 'followers' => 'Most followers', 'fee_low' => 'Lowest fee', 'fee_high' => 'Highest fee', 'name' => 'Name A-Z', 'updated' => 'Recently updated'] as $k => $l): ?>
+                <?php foreach (['newest' => 'Newest first', 'oldest' => 'Oldest first', 'followers' => 'Most followers', 'views' => 'Most avg. views', 'fee_low' => 'Lowest fee', 'fee_high' => 'Highest fee', 'name' => 'Name A-Z', 'updated' => 'Recently updated'] as $k => $l): ?>
                     <option value="<?= $k ?>"<?= $f['sort'] === $k ? ' selected' : '' ?>><?= $l ?></option>
                 <?php endforeach; ?>
             </select></div>
@@ -100,11 +100,11 @@ $moreOpen = $f['niche'] || $f['platform'] || $f['country'] || $f['min_followers'
                             <?php if ($r['featured']): ?><span class="ic-feat"><i class="ph-fill ph-star"></i>Featured</span><?php endif; ?>
                         </div>
                         <div class="ic-body">
-                            <div class="ic-name"><a href="<?= e(url('admin/influencers/' . $r['id'])) ?>"><?= e($r['full_name']) ?></a></div>
+                            <div class="ic-name"><a href="<?= e(url('admin/influencers/' . $r['id'])) ?>"><?= e($r['full_name']) ?></a><?php if (!empty($r['display_name'])): ?> <span class="small muted"><?= e($r['display_name']) ?></span><?php endif; ?></div>
                             <div class="ic-loc"><?= e(trim($r['city'] . ', ' . $r['country'], ', ')) ?: '&nbsp;' ?></div>
                             <div class="tags"><?php foreach (array_slice(csv_list($r['niches']), 0, 3) as $n): ?><span class="tag"><?= e($n) ?></span><?php endforeach; ?></div>
                             <div class="ic-stats">
-                                <div><b><?= e(short_number($r['total_followers'])) ?></b><span>reach</span></div>
+                                <div><b><?= e(short_number($r['total_followers'])) ?></b><span>followers<?= !empty($r['avg_impressions']) ? ' &middot; ' . e(short_number($r['avg_impressions'])) . ' avg. views' : '' ?></span></div>
                                 <div><b><?= e(fee_range($r['fee_min'], $r['fee_max'], $r['currency'])) ?></b><span>fee range</span></div>
                             </div>
                             <div class="ic-plat"><?php foreach ($plats as $p): ?><i class="ph-fill <?= e($platforms[$p]['icon']) ?>" title="<?= e($platforms[$p]['label'] . ': ' . short_number($r[$p . '_followers'])) ?>"></i><?php endforeach; ?><span class="small muted" style="margin-left:auto"><?= e(time_ago($r['created_at'])) ?></span></div>
@@ -121,7 +121,7 @@ $moreOpen = $f['niche'] || $f['platform'] || $f['country'] || $f['min_followers'
                         <td><input type="checkbox" name="ids[]" value="<?= (int) $r['id'] ?>" data-row-check aria-label="Select <?= e($r['full_name']) ?>"></td>
                         <td><a class="person" href="<?= e(url('admin/influencers/' . $r['id'])) ?>"><span class="avatar"><?php if ($r['photo']): ?><img src="<?= e(upload_url($r['photo'])) ?>" alt="" loading="lazy"><?php else: ?><?= e(initials($r['full_name'])) ?><?php endif; ?></span><span><b><?= e($r['full_name']) ?><?= $r['featured'] ? ' <i class="ph-fill ph-star" style="color:#F5A524" title="Featured"></i>' : '' ?></b><small><?= e($r['email']) ?></small></span></a></td>
                         <td class="nowrap" style="font-size:18px"><?php foreach ($platforms as $k => $p): if (!empty($r[$k])): ?><a href="<?= e(social_url($k, $r[$k])) ?>" target="_blank" rel="noopener" title="<?= e($p['label'] . ': ' . $r[$k]) ?>"><i class="ph-fill <?= e($p['icon']) ?>"></i></a> <?php endif; endforeach; ?></td>
-                        <td><b><?= e(short_number($r['total_followers'])) ?></b><?php if ($r['engagement_rate']): ?><div class="small muted"><?= e($r['engagement_rate'] + 0) ?>% ER</div><?php endif; ?></td>
+                        <td><b><?= e(short_number($r['total_followers'])) ?></b><?php if (!empty($r['avg_impressions'])): ?><div class="small muted"><?= e(short_number($r['avg_impressions'])) ?> avg. views</div><?php endif; ?><?php if ($r['engagement_rate']): ?><div class="small muted"><?= e($r['engagement_rate'] + 0) ?>% ER</div><?php endif; ?></td>
                         <td class="small"><?= e(implode(', ', array_slice(csv_list($r['niches']), 0, 3))) ?></td>
                         <td class="nowrap"><b><?= e(fee_range($r['fee_min'], $r['fee_max'], $r['currency'])) ?></b></td>
                         <td><?= (int) $r['app_count'] ?></td>

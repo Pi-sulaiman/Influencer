@@ -713,3 +713,15 @@ ul, ol { margin: 0; padding: 0; }
   .chart-area, .chart-dot { opacity: 1; }
   .bars span { transform: none; }
 }
+
+/* ---------- Shared utilities ---------- */
+.no-js .js-only { display: none !important; }
+.tag { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: var(--r-pill); background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--text-2); line-height: 1.4; }
+.link-btn { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid currentColor; border-right-color: transparent; display: inline-block; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #1F9D60; display: inline-block; box-shadow: 0 0 0 0 rgba(31, 157, 96, .5); animation: livepulse 2s infinite; }
+@keyframes livepulse { 70% { box-shadow: 0 0 0 8px rgba(31, 157, 96, 0); } 100% { box-shadow: 0 0 0 0 rgba(31, 157, 96, 0); } }
+.shake { animation: shake .45s var(--ease); }
+@keyframes shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+@media (prefers-reduced-motion: reduce) { .shake, .live-dot, .spinner { animation: none; } }

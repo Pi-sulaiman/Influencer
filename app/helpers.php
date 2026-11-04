@@ -459,12 +459,94 @@ function content_type_options()
 function platform_options()
 {
     return [
-        'instagram' => ['label' => 'Instagram', 'icon' => 'ph-instagram-logo', 'placeholder' => '@yourhandle'],
-        'youtube'   => ['label' => 'YouTube',   'icon' => 'ph-youtube-logo',   'placeholder' => 'youtube.com/@channel'],
-        'tiktok'    => ['label' => 'TikTok',    'icon' => 'ph-tiktok-logo',    'placeholder' => '@yourhandle'],
-        'facebook'  => ['label' => 'Facebook',  'icon' => 'ph-facebook-logo',  'placeholder' => 'facebook.com/page'],
-        'x'         => ['label' => 'X',         'icon' => 'ph-x-logo',         'placeholder' => '@yourhandle'],
+        'instagram' => ['label' => 'Instagram', 'icon' => 'ph-instagram-logo', 'placeholder' => 'instagram.com/yourname', 'domains' => ['instagram.com', 'instagr.am'], 'views' => 'Avg. views per reel'],
+        'youtube'   => ['label' => 'YouTube',   'icon' => 'ph-youtube-logo',   'placeholder' => 'youtube.com/@channel',   'domains' => ['youtube.com', 'youtu.be'], 'views' => 'Avg. views per video'],
+        'tiktok'    => ['label' => 'TikTok',    'icon' => 'ph-tiktok-logo',    'placeholder' => 'tiktok.com/@yourname',   'domains' => ['tiktok.com'], 'views' => 'Avg. views per video'],
+        'facebook'  => ['label' => 'Facebook',  'icon' => 'ph-facebook-logo',  'placeholder' => 'facebook.com/yourpage',  'domains' => ['facebook.com', 'fb.com', 'fb.me'], 'views' => 'Avg. reach per post'],
+        'x'         => ['label' => 'X',         'icon' => 'ph-x-logo',         'placeholder' => 'x.com/yourname',         'domains' => ['x.com', 'twitter.com'], 'views' => 'Avg. impressions per post'],
     ];
+}
+
+/**
+ * True when what the creator typed is a plain @handle, or a link on one of
+ * the platform's own domains. Stops an Instagram link in the YouTube box.
+ */
+function profile_link_matches($platform, $value)
+{
+    $value = trim((string) $value);
+    if ($value === '' || !preg_match('#[/.]#', ltrim($value, '@'))) {
+        return true; // a bare handle
+    }
+    $host = parse_url(preg_match('#^https?://#i', $value) ? $value : 'https://' . $value, PHP_URL_HOST);
+    $host = strtolower(preg_replace('/^(www\.|m\.|mobile\.)/', '', (string) $host));
+    foreach (platform_options()[$platform]['domains'] ?? [] as $d) {
+        if ($host === $d || str_ends_with_compat($host, '.' . $d)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function str_ends_with_compat($haystack, $needle)
+{
+    return $needle === '' || substr($haystack, -strlen($needle)) === $needle;
+}
+
+/** Per-deliverable rates a creator can add to their rate card. */
+function rate_card_options()
+{
+    return [
+        'reel'  => ['Reel or short video', 'ph-film-strip'],
+        'post'  => ['Feed post or carousel', 'ph-images'],
+        'story' => ['Story set (3 frames)', 'ph-circles-three'],
+        'video' => ['Long-form video', 'ph-youtube-logo'],
+        'ugc'   => ['UGC video (no posting)', 'ph-video-camera'],
+    ];
+}
+
+function audience_age_options()
+{
+    return ['13-17', '18-24', '25-34', '35-44', '45+'];
+}
+
+function audience_gender_options()
+{
+    return ['Mostly women', 'Balanced', 'Mostly men'];
+}
+
+/** Creator size band from total followers. */
+function creator_tier($followers)
+{
+    $n = (int) $followers;
+    if ($n >= 1000000) return ['key' => 'mega', 'label' => 'Mega', 'range' => '1M+'];
+    if ($n >= 500000) return ['key' => 'macro', 'label' => 'Macro', 'range' => '500K-1M'];
+    if ($n >= 100000) return ['key' => 'mid', 'label' => 'Mid-tier', 'range' => '100K-500K'];
+    if ($n >= 10000) return ['key' => 'micro', 'label' => 'Micro', 'range' => '10K-100K'];
+    return ['key' => 'nano', 'label' => 'Nano', 'range' => 'Under 10K'];
+}
+
+/** Public reference for a creator, e.g. PK1042. Safe to show to brands. */
+function creator_code($id)
+{
+    return 'PK' . (1000 + (int) $id);
+}
+
+function creator_id_from_code($code)
+{
+    return preg_match('/^PK(\d{4,})$/i', trim((string) $code), $m) ? (int) $m[1] - 1000 : 0;
+}
+
+/** Decoded rate card: ['reel' => 5000.0, ...] with only known keys and positive numbers. */
+function rate_card($json)
+{
+    $data = json_decode((string) $json, true);
+    $out = [];
+    foreach (array_keys(rate_card_options()) as $k) {
+        if (isset($data[$k]) && is_numeric($data[$k]) && $data[$k] > 0) {
+            $out[$k] = (float) $data[$k];
+        }
+    }
+    return $out;
 }
 
 /** Build a clickable profile URL from whatever the creator typed. */

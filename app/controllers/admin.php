@@ -136,8 +136,8 @@ function influencer_filters()
     $args = [];
     if ($f['q'] !== '') {
         $like = '%' . $f['q'] . '%';
-        $where[] = '(i.full_name LIKE ? OR i.email LIKE ? OR i.instagram LIKE ? OR i.youtube LIKE ? OR i.tiktok LIKE ? OR i.city LIKE ? OR i.phone LIKE ?)';
-        array_push($args, $like, $like, $like, $like, $like, $like, $like);
+        $where[] = '(i.full_name LIKE ? OR i.display_name LIKE ? OR i.email LIKE ? OR i.instagram LIKE ? OR i.youtube LIKE ? OR i.tiktok LIKE ? OR i.city LIKE ? OR i.phone LIKE ?)';
+        array_push($args, $like, $like, $like, $like, $like, $like, $like, $like);
     }
     if (in_array($f['status'], ['new', 'approved', 'on_hold', 'rejected'], true)) {
         $where[] = 'i.status = ?';
@@ -173,6 +173,7 @@ function influencer_filters()
         'newest' => 'i.created_at DESC',
         'oldest' => 'i.created_at ASC',
         'followers' => 'i.total_followers DESC',
+        'views' => 'CASE WHEN i.avg_impressions IS NULL THEN 1 ELSE 0 END, i.avg_impressions DESC',
         'fee_low' => 'CASE WHEN i.fee_min IS NULL THEN 1 ELSE 0 END, i.fee_min ASC',
         'fee_high' => 'CASE WHEN i.fee_max IS NULL THEN 1 ELSE 0 END, i.fee_max DESC',
         'name' => 'i.full_name ASC',
@@ -264,20 +265,35 @@ function csv_download($filename, array $header, array $rows)
 
 function influencer_csv_row(array $i)
 {
-    return [
-        $i['id'], $i['full_name'], $i['email'], $i['phone'], $i['city'], $i['country'], $i['gender'], $i['languages'],
-        $i['primary_platform'], $i['instagram'], $i['instagram_followers'], $i['youtube'], $i['youtube_followers'],
-        $i['tiktok'], $i['tiktok_followers'], $i['facebook'], $i['facebook_followers'], $i['x'], $i['x_followers'],
-        $i['total_followers'], $i['engagement_rate'], $i['niches'], $i['content_types'], $i['currency'], $i['fee_min'], $i['fee_max'],
-        $i['fee_notes'], $i['website'], status_label($i['status']), $i['rating'], $i['photo'] ? abs_url($i['photo']) : '', $i['created_at'],
-    ];
+    $rates = rate_card($i['rate_card'] ?? '');
+    $row = [$i['id'], creator_code($i['id']), $i['full_name'], $i['display_name'] ?? '', $i['email'], $i['phone'], $i['city'], $i['country'], $i['gender'], $i['languages'], $i['primary_platform']];
+    foreach (array_keys(platform_options()) as $p) {
+        array_push($row, $i[$p], $i[$p . '_followers'], $i[$p . '_avg_views'] ?? '');
+    }
+    array_push($row, $i['total_followers'], $i['avg_impressions'] ?? '', $i['monthly_impressions'] ?? '', $i['engagement_rate'],
+        $i['audience_country'] ?? '', $i['audience_age'] ?? '', $i['audience_gender'] ?? '', $i['niches'], $i['content_types'], $i['past_brands'] ?? '',
+        $i['currency'], $i['fee_min'], $i['fee_max']);
+    foreach (array_keys(rate_card_options()) as $k) {
+        $row[] = $rates[$k] ?? '';
+    }
+    array_push($row, !empty($i['barter_ok']) ? 'Yes' : 'No', $i['fee_notes'], $i['website'], status_label($i['status']), $i['rating'],
+        $i['photo'] ? abs_url($i['photo']) : '', $i['created_at']);
+    return $row;
 }
 
 function influencer_csv_header()
 {
-    return ['ID', 'Name', 'Email', 'Phone', 'City', 'Country', 'Gender', 'Languages', 'Main platform', 'Instagram', 'IG followers',
-        'YouTube', 'YT subscribers', 'TikTok', 'TT followers', 'Facebook', 'FB followers', 'X', 'X followers', 'Total reach',
-        'Engagement %', 'Niches', 'Content types', 'Currency', 'Fee min', 'Fee max', 'Fee notes', 'Website', 'Status', 'Rating', 'Photo URL', 'Registered'];
+    $h = ['ID', 'Creator code', 'Full name', 'Creator name', 'Email', 'Phone', 'City', 'Country', 'Gender', 'Languages', 'Main platform'];
+    foreach (platform_options() as $p) {
+        array_push($h, $p['label'], $p['label'] . ' followers', $p['label'] . ' avg. views');
+    }
+    array_push($h, 'Total followers', 'Avg. impressions per post (all channels)', 'Impressions last 30 days', 'Engagement %',
+        'Audience country', 'Audience age', 'Audience gender', 'Niches', 'Content types', 'Past brands', 'Currency', 'Fee min', 'Fee max');
+    foreach (rate_card_options() as $r) {
+        $h[] = 'Rate: ' . $r[0];
+    }
+    array_push($h, 'Product-only OK', 'Fee notes', 'Website', 'Status', 'Rating', 'Photo URL', 'Registered');
+    return $h;
 }
 
 function admin_influencers_export()

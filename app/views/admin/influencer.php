@@ -2,11 +2,13 @@
 /** @var array $inf @var array $apps @var mixed $prevId @var mixed $nextId */
 $platforms = platform_options();
 $wa = preg_replace('/\D/', '', (string) $inf['phone']);
+$rates = rate_card($inf['rate_card'] ?? '');
+$tier = creator_tier($inf['total_followers']);
 ?>
 <div class="page-head">
     <div class="flex">
         <a class="icon-btn" href="<?= e(url('admin/influencers')) ?>" aria-label="Back to influencers"><i class="ph-bold ph-arrow-left"></i></a>
-        <div><h2 style="font-size:20px">Influencer profile</h2><p>Registered <?= e(nice_date($inf['created_at'], 'M j, Y \a\t g:i a')) ?> &middot; Source: <?= e($inf['source'] ?: 'direct') ?></p></div>
+        <div><h2 style="font-size:20px">Influencer profile <span class="badge no-dot" title="Code brands see on the website"><?= e(creator_code($inf['id'])) ?></span></h2><p>Registered <?= e(nice_date($inf['created_at'], 'M j, Y \a\t g:i a')) ?> &middot; Source: <?= e($inf['source'] ?: 'direct') ?></p></div>
     </div>
     <div class="actions">
         <?php if ($prevId): ?><a class="icon-btn" href="<?= e(url('admin/influencers/' . $prevId)) ?>" aria-label="Previous profile"><i class="ph-bold ph-caret-left"></i></a><?php endif; ?>
@@ -22,7 +24,8 @@ $wa = preg_replace('/\D/', '', (string) $inf['phone']);
             </div>
             <div>
                 <div class="flex" style="flex-wrap:wrap">
-                    <h2 class="profile-name"><?= e($inf['full_name']) ?></h2>
+                    <h2 class="profile-name"><?= e($inf['full_name']) ?><?php if (!empty($inf['display_name'])): ?> <span class="muted" style="font-weight:600;font-size:.7em">"<?= e($inf['display_name']) ?>"</span><?php endif; ?></h2>
+                    <span class="badge no-dot"><?= e($tier['label']) ?> &middot; <?= e($tier['range']) ?></span>
                     <span class="badge b-<?= e($inf['status']) ?>"><?= e(status_label($inf['status'])) ?></span>
                     <?php if ($inf['featured']): ?><span class="badge no-dot" style="background:#FFF4D6;color:#8A5A00"><i class="ph-fill ph-star"></i>Featured on site</span><?php endif; ?>
                 </div>
@@ -41,9 +44,11 @@ $wa = preg_replace('/\D/', '', (string) $inf['phone']);
                     <button class="btn btn-ghost btn-sm" type="button" data-copy="<?= e($inf['email']) ?>" data-copied="Email copied"><i class="ph ph-copy"></i>Copy email</button>
                 </div>
                 <div class="profile-stats">
-                    <div><b><?= e(short_number($inf['total_followers'])) ?></b><span>Total reach</span></div>
-                    <div class="fee"><b><?= e(fee_range($inf['fee_min'], $inf['fee_max'], $inf['currency'])) ?></b><span>Fee range (<?= e($inf['currency']) ?>)</span></div>
+                    <div><b><?= e(short_number($inf['total_followers'])) ?></b><span>Total followers</span></div>
+                    <div><b><?= !empty($inf['avg_impressions']) ? e(short_number($inf['avg_impressions'])) : '-' ?></b><span>Avg. impressions per post</span></div>
+                    <div><b><?= !empty($inf['monthly_impressions']) ? e(short_number($inf['monthly_impressions'])) : '-' ?></b><span>Impressions, last 30 days</span></div>
                     <div><b><?= $inf['engagement_rate'] !== null ? e($inf['engagement_rate'] + 0) . '%' : '-' ?></b><span>Engagement rate</span></div>
+                    <div class="fee"><b><?= e(fee_range($inf['fee_min'], $inf['fee_max'], $inf['currency'])) ?></b><span>Fee range (<?= e($inf['currency']) ?>)</span></div>
                     <div><b><?= count($apps) ?></b><span>Campaign applications</span></div>
                 </div>
             </div>
@@ -56,7 +61,7 @@ $wa = preg_replace('/\D/', '', (string) $inf['phone']);
                     <?php $any = false; foreach ($platforms as $k => $p): if (empty($inf[$k])) continue; $any = true; ?>
                         <a class="social-row" href="<?= e(social_url($k, $inf[$k])) ?>" target="_blank" rel="noopener">
                             <i class="ph-fill <?= e($p['icon']) ?>"></i>
-                            <div style="min-width:0"><div class="s-handle"><?= e($inf[$k]) ?></div><div class="small muted"><?= e($p['label']) ?></div></div>
+                            <div style="min-width:0"><div class="s-handle"><?= e($inf[$k]) ?></div><div class="small muted"><?= e($p['label']) ?><?= !empty($inf[$k . '_avg_views']) ? ' &middot; ' . e(short_number($inf[$k . '_avg_views'])) . ' avg. views' : '' ?></div></div>
                             <span class="s-count"><?= $inf[$k . '_followers'] !== null ? e(short_number($inf[$k . '_followers'])) : '-' ?></span>
                         </a>
                     <?php endforeach; ?>
@@ -74,13 +79,29 @@ $wa = preg_replace('/\D/', '', (string) $inf['phone']);
                         <dt>Content types</dt><dd><?= e($inf['content_types'] ?: '-') ?></dd>
                         <dt>Minimum fee</dt><dd><?= e(money($inf['fee_min'], $inf['currency']) ?: '-') ?></dd>
                         <dt>Maximum fee</dt><dd><?= e(money($inf['fee_max'], $inf['currency']) ?: '-') ?></dd>
+                        <?php foreach (rate_card_options() as $rk => $ro): if (isset($rates[$rk])): ?>
+                            <dt><?= e($ro[0]) ?></dt><dd><?= e(money($rates[$rk], $inf['currency'])) ?></dd>
+                        <?php endif; endforeach; ?>
                         <dt>Included</dt><dd><?= e($inf['fee_notes'] ?: '-') ?></dd>
+                        <dt>Product-only</dt><dd><?= !empty($inf['barter_ok']) ? '<span class="badge b-approved">Open to it</span>' : 'No' ?></dd>
                         <dt>Feature consent</dt><dd><?= $inf['consent_feature'] ? '<span class="badge b-approved">Allowed</span>' : '<span class="badge">Not given</span>' ?></dd>
                         <dt>Last updated</dt><dd><?= e(nice_date($inf['updated_at'], 'M j, Y g:i a')) ?></dd>
                     </dl>
                 </div>
             </section>
         </div>
+
+        <section class="card">
+            <div class="card-head"><h2>Audience</h2></div>
+            <div class="card-body">
+                <dl class="dl">
+                    <dt>Top country</dt><dd><?= e($inf['audience_country'] ?? '' ?: '-') ?></dd>
+                    <dt>Main age group</dt><dd><?= e($inf['audience_age'] ?? '' ?: '-') ?></dd>
+                    <dt>Gender split</dt><dd><?= e($inf['audience_gender'] ?? '' ?: '-') ?></dd>
+                    <dt>Past brands</dt><dd><?= e($inf['past_brands'] ?? '' ?: '-') ?></dd>
+                </dl>
+            </div>
+        </section>
 
         <?php if ($inf['bio']): ?>
             <section class="card"><div class="card-head"><h2>Bio</h2></div><div class="card-body"><p class="msg-body"><?= e($inf['bio']) ?></p></div></section>
