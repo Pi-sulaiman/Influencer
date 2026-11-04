@@ -917,3 +917,21 @@ body.has-sl-tray .footer { padding-bottom: 90px; }
 /* Contact points: the text block inside each row stacks normally. */
 .contact-points a > div, .contact-points > div > div { display: block; }
 .contact-points > div > div span, .contact-points a > div span { display: block; }
+
+/* ---------- Landing page refinements ---------- */
+/* Stat band: dividers between figures, balanced at any count. */
+.stats-grid > div { position: relative; padding-left: 28px; }
+.stats-grid > div::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 3px; background: linear-gradient(var(--red), var(--peach)); }
+.stats-grid[style*="--cols:2"], .stats-grid[style*="--cols:1"] { max-width: 880px; }
+.hero2-links { display: flex; flex-wrap: wrap; gap: 6px 26px; }
+.showcase-head .eyebrow { margin-bottom: 14px; }
+.showcase-actions { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: flex-end; }
+.how-book-home { margin: -8px 0 28px; max-width: none; }
+.carousel-track .tcard { scroll-snap-align: start; }
+.carousel.is-dragging .tcard { pointer-events: none; }
+@media (max-width: 760px) { .showcase-head { flex-direction: column; align-items: flex-start; } .showcase-actions { justify-content: flex-start; } }
+/* Toast: fully hidden when idle, and above the shortlist tray when it shows. */
+.toast { transform: translate(-50%, calc(100% + 48px)); opacity: 0; transition: transform .5s var(--ease-spring), opacity .3s; }
+.toast.is-on { opacity: 1; }
+body.has-sl-tray .toast { bottom: 92px; }
+@media (max-width: 420px) { .jnav-count { display: none; } }

@@ -93,7 +93,16 @@
       return p ? (c[p] || 0) : (c.any || 0);
     };
     var esc = function (s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+    var browse = document.querySelector('[data-mm-browse]');
+    var syncBrowse = function () {
+      if (!browse) return;
+      var q = [];
+      if (state.niche) q.push('niche=' + encodeURIComponent(state.niche));
+      if (state.platform) q.push('platform=' + encodeURIComponent(state.platform));
+      browse.href = browse.getAttribute('data-base') + (q.length ? '?' + q.join('&') : '');
+    };
     var update = function () {
+      syncBrowse();
       var n = state.niche, p = state.platform;
       var pl = p ? (data.platforms || {})[p] : '';
       var count = countFor();

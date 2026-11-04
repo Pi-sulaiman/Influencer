@@ -11,7 +11,13 @@ Plain PHP + MySQL, built for cPanel hosting. No Composer, no Node and no build s
   - GSAP interactions: animated headline, pinned horizontal "five moves" section, image parallax, a marquee that reacts to scroll speed, smooth scrolling.
   - Niche grid, campaign estimator, creator carousel (database only), latest blog posts (database), FAQ with schema markup.
 - **Brief builder** (`/contact`): brands choose goal, niches, platforms, creator size, budget and timeline in 4 steps. A live summary shows how many approved creators match. Creators and other visitors get a simple contact form.
-- **Influencer registration** (`/join` and campaign links): multi-step form with photo upload, channels with follower counts (accepts `45K`, `1.2M`), niches, content types and a min/max fee range with a live preview card. No password needed.
+- **Influencer registration** (`/join` and campaign links): a 5-step form (About you, Channels, Audience, Rates, Review) with a live preview card, a profile strength meter and a draft saved in the browser. No password needed. It collects:
+  - full name and creator/channel name, email, phone or WhatsApp, city, country, languages
+  - per platform: profile link or @handle (checked against the platform, and you can paste any link to add it), followers (required) and average views per post (accepts `45K`, `1.2M`)
+  - engagement rate, impressions in the last 30 days and the combined average impressions per post (calculated)
+  - audience country, age group and gender split, niches, content formats, past brands and bio
+  - minimum and maximum fee, plus an optional per-format rate card that fills the range, and an "open to product-only" switch. No payment is taken.
+- **Find talent** (`/talent`): brands and agencies browse approved creators who allowed featuring, filter by niche, size and platform, and shortlist them. The shortlist follows them around the site in a tray and is sent as one **quote request**. Public cards show stats only, never fees, handles or contact details. Each creator has a profile page at `/talent/PK1001`.
 - **SEO niche landing pages**: `/influencers` plus 20 pages such as `/influencers/beauty`, each with its own copy, creators, campaign ideas and FAQ schema.
 - **Blog**: clean URLs, categories, search, table of contents, related posts, share buttons, Article + Breadcrumb schema.
 - **Other pages**: About, Services, For brands, For creators, Privacy, Terms, a branded 404 page, `sitemap.xml`, `robots.txt` and an RSS feed at `/feed.xml`.
@@ -27,7 +33,7 @@ Plain PHP + MySQL, built for cPanel hosting. No Composer, no Node and no build s
 
   Visits, applicants and conversion are tracked per campaign. Applicants move through a pipeline (Applied, Shortlisted, Selected, Rejected) and can be exported to CSV.
 - **Blog editor**: rich text, image upload, YouTube embeds, a Google preview, a live SEO score with a checklist, scheduling and categories.
-- **Messages**: brand briefs show every brief field, with a "Find matching influencers" button.
+- **Messages**: brand briefs show every brief field, with a "Find matching influencers" button. Quote requests from `/talent` list each requested creator with their private fee range and rate card, and a total creator cost per currency so you can add your margin and reply with a quote.
 - **Subscribers**: newsletter sign-ups with CSV export.
 - **Site content**:
   - **Homepage numbers**: shown live from your database by default, or type your own figure to override.
@@ -66,6 +72,16 @@ To test against XAMPP MySQL instead, delete `config.local.php`, put your local M
 8. **Connect Google:** in Admin > Settings, add your GA4 ID and Search Console verification code, then submit `https://peakilo.com/sitemap.xml` in Search Console.
 
 Future database changes are applied automatically through versioned migrations in `app/schema.php`.
+
+### If the site keeps sending you to /install
+
+That is expected until the installer has run. If the installer shows **Database connection** in red, it explains the fix. Most often `config.php` still has the example login (`cpaneluser_peakilo` / `CHANGE_ME`):
+
+1. cPanel > MySQL Databases: note the full database name and user, including the account prefix (for example `abcd1234_peakilo`). Under "Add User To Database", give the user ALL PRIVILEGES.
+2. File Manager > `public_html/config.php` > Edit: put those values in `'name'`, `'user'` and `'pass'`. Keep `'host' => 'localhost'`.
+3. Refresh `/install` and create your admin account right away, then sign in at `/admin/login`.
+
+The GitHub deploy never uploads `config.php`, so your edits on the server are kept. If your FTP account does not open straight into the website folder, add a repository variable `FTP_SERVER_DIR` (for example `./public_html/`). Deploys can also be started by hand from the Actions tab (Run workflow).
 
 ## Before you launch
 
@@ -111,7 +127,7 @@ app/views/             templates (site, blog, join, admin, partials)
 app/niches.php         niche catalogue, copy for niche pages, live counts
 app/schema.php         database tables, starter content, migrations
 assets/css/            site.css, motion.css (hero, GSAP sections), join.css, admin.css
-assets/js/             site.js, motion.js (GSAP), home.js (hero), brief.js, join.js, admin.js, editor.js
+assets/js/             site.js, motion.js (GSAP), home.js (hero), brief.js, join.js, talent.js, shortlist.js, admin.js, editor.js
 uploads/               creator photos, blog and campaign images
 storage/               install lock (and the local SQLite file)
 ```

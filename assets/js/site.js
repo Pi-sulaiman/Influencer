@@ -466,6 +466,11 @@
       down = false;
       car.classList.remove('is-dragging');
     });
+    // A drag should not count as a click on the card under the pointer.
+    car.addEventListener('click', function (e) {
+      if (moved > 4) { e.preventDefault(); e.stopPropagation(); moved = 0; }
+    }, true);
+    car.addEventListener('dragstart', function (e) { if (e.target.tagName === 'IMG') e.preventDefault(); });
   });
 
   /* ---------- Campaign estimator ---------- */

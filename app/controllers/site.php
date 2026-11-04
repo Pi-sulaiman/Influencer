@@ -9,6 +9,7 @@ function home_faqs()
         ['q' => 'What does an influencer marketing agency actually do?', 'a' => 'We plan the campaign, find and vet creators who fit your audience, negotiate rates, manage briefs and approvals, make sure content goes live on time and report on the results. You get one point of contact instead of dozens of creator conversations.'],
         ['q' => 'How much budget do I need to start?', 'a' => 'Campaigns with micro creators can start from a few thousand dollars. We size the plan around your goal and tell you up front what reach and content you can expect for the budget.'],
         ['q' => 'Which platforms do you run campaigns on?', 'a' => 'Instagram, YouTube, TikTok, Facebook, X, Snapchat and Pinterest, plus podcasts and UGC that you can run as ads on any channel.'],
+        ['q' => 'How do I book a creator, and how does payment work?', 'a' => 'Shortlist creators on our Find talent page, or send us a brief and we shortlist for you. We confirm availability and send a quote within one business day. Nothing is paid online: once you approve the plan, we agree payment terms with you directly and handle every creator payment.'],
         ['q' => 'How do you choose creators?', 'a' => 'Every creator in our network is reviewed for audience quality, engagement, content standards and brand safety. For each campaign we shortlist creators whose audience matches your target customer and share profiles before anyone is booked.'],
         ['q' => 'I am a creator. Does it cost anything to join?', 'a' => 'No. Joining the Peakilo creator network is free. Create your profile with your channels and rate range and we will reach out when a paid campaign fits your content.'],
         ['q' => 'How do you measure results?', 'a' => 'We agree on the metrics before launch, such as reach, views, engagement, clicks or sales from tracked links and codes. You get a clear report at the end of every campaign with what worked and what we would change.'],
@@ -318,7 +319,7 @@ function site_talent_profile($params)
         not_found();
     }
     $c = roster_card($row);
-    if (strtoupper($params['code']) !== $c['code']) {
+    if ($params['code'] !== $c['code']) {
         redirect('talent/' . $c['code'], 301);
     }
     $similar = [];

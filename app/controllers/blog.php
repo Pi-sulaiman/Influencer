@@ -124,6 +124,10 @@ function seo_sitemap()
         $urls[] = ['loc' => abs_url($path), 'lastmod' => $path === 'blog' && $latest ? $latest : null, 'priority' => $prio];
     }
     $urls[] = ['loc' => abs_url('influencers'), 'lastmod' => null, 'priority' => '0.8'];
+    $urls[] = ['loc' => abs_url('talent'), 'lastmod' => null, 'priority' => '0.8'];
+    foreach (all('SELECT id, updated_at FROM influencers WHERE ' . roster_where()) as $r) {
+        $urls[] = ['loc' => abs_url('talent/' . creator_code($r['id'])), 'lastmod' => $r['updated_at'], 'priority' => '0.5'];
+    }
     foreach (array_keys(niche_catalog()) as $slug) {
         $urls[] = ['loc' => abs_url('influencers/' . $slug), 'lastmod' => null, 'priority' => '0.7'];
     }

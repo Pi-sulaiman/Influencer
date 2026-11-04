@@ -463,7 +463,7 @@ function platform_options()
         'youtube'   => ['label' => 'YouTube',   'icon' => 'ph-youtube-logo',   'placeholder' => 'youtube.com/@channel',   'domains' => ['youtube.com', 'youtu.be'], 'views' => 'Avg. views per video'],
         'tiktok'    => ['label' => 'TikTok',    'icon' => 'ph-tiktok-logo',    'placeholder' => 'tiktok.com/@yourname',   'domains' => ['tiktok.com'], 'views' => 'Avg. views per video'],
         'facebook'  => ['label' => 'Facebook',  'icon' => 'ph-facebook-logo',  'placeholder' => 'facebook.com/yourpage',  'domains' => ['facebook.com', 'fb.com', 'fb.me'], 'views' => 'Avg. reach per post'],
-        'x'         => ['label' => 'X',         'icon' => 'ph-x-logo',         'placeholder' => 'x.com/yourname',         'domains' => ['x.com', 'twitter.com'], 'views' => 'Avg. impressions per post'],
+        'x'         => ['label' => 'X',         'icon' => 'ph-x-logo',         'placeholder' => 'x.com/yourname',         'domains' => ['x.com', 'twitter.com'], 'views' => 'Avg. impressions'],
     ];
 }
 

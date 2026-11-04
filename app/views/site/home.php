@@ -103,7 +103,12 @@ $matchData = [
                     <button class="btn btn-primary btn-lg" type="submit" data-magnetic>Get matched <i class="ph-bold ph-arrow-up-right" aria-hidden="true"></i></button>
                 </div>
             </form>
-            <a class="hero2-creator-link" href="<?= e(url('join')) ?>" data-hero-in>Are you a creator? <b>Join as a creator</b> <i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+            <div class="hero2-links" data-hero-in>
+                <?php if ($creators): ?>
+                    <a class="hero2-creator-link" href="<?= e(url('talent')) ?>" data-mm-browse data-base="<?= e(url('talent')) ?>"><i class="ph-bold ph-users-three" aria-hidden="true"></i> <b>Browse matching creators</b> <i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+                <?php endif; ?>
+                <a class="hero2-creator-link" href="<?= e(url('join')) ?>">Are you a creator? <b>Join as a creator</b> <i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+            </div>
         </div>
 
         <div class="wall" aria-hidden="true" data-wall>
@@ -321,26 +326,29 @@ $matchData = [
 <?php if ($creators): ?>
 <section class="section">
     <div class="container showcase-head">
-        <h2 class="h2" data-split>Meet creators from our network.</h2>
-        <div class="carousel-nav">
-            <button class="round-btn" type="button" data-carousel-prev aria-label="Previous creators"><i class="ph-bold ph-arrow-left"></i></button>
-            <button class="round-btn" type="button" data-carousel-next aria-label="Next creators"><i class="ph-bold ph-arrow-right"></i></button>
+        <div>
+            <p class="eyebrow" data-reveal><?= mark_svg('') ?> Book creators directly</p>
+            <h2 class="h2" data-split>Meet creators from our network.</h2>
         </div>
+        <div class="showcase-actions">
+            <a class="link-arrow" href="<?= e(url('talent')) ?>">Browse all creators <i class="ph-bold ph-arrow-right" aria-hidden="true"></i></a>
+            <div class="carousel-nav">
+                <button class="round-btn" type="button" data-carousel-prev aria-label="Previous creators"><i class="ph-bold ph-arrow-left"></i></button>
+                <button class="round-btn" type="button" data-carousel-next aria-label="Next creators"><i class="ph-bold ph-arrow-right"></i></button>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <ol class="how-book how-book-home" data-reveal>
+            <li><span><i class="ph-bold ph-heart"></i></span><div><b>Shortlist</b><small>Tap the heart on any creator</small></div></li>
+            <li><span><i class="ph-bold ph-paper-plane-tilt"></i></span><div><b>Request a quote</b><small>One request for all your picks</small></div></li>
+            <li><span><i class="ph-bold ph-handshake"></i></span><div><b>We confirm and launch</b><small>Quote in one business day, nothing to pay online</small></div></li>
+        </ol>
     </div>
     <div class="carousel" data-carousel tabindex="0" aria-label="Featured creators">
         <div class="carousel-track">
             <?php foreach ($creators as $i => $cr): ?>
-                <article class="creator-card" data-reveal style="--i:<?= min($i, 4) ?>">
-                    <div class="cc-media"><img src="<?= e($cr['photo']) ?>" alt="<?= e($cr['name']) ?>, <?= e($cr['niches'][0] ?? 'content') ?> creator" loading="lazy" draggable="false" width="400" height="440"></div>
-                    <div class="cc-body">
-                        <div class="cc-name"><?= e($cr['name']) ?> <i class="ph-fill ph-seal-check" aria-label="Vetted by Peakilo"></i></div>
-                        <div class="cc-meta"><?= e(implode(', ', array_slice($cr['niches'], 0, 2))) ?><?= $cr['city'] ? ' &middot; ' . e($cr['city']) : '' ?></div>
-                        <div class="cc-stats">
-                            <div><b><?= e(short_number($cr['reach'])) ?></b> <span class="muted">reach</span></div>
-                            <div class="cc-platforms" aria-label="Platforms"><?php foreach ($cr['platforms'] as $p): ?><i class="ph-fill <?= e($platformMeta[$p]['icon']) ?>" title="<?= e($platformMeta[$p]['label']) ?>"></i><?php endforeach; ?></div>
-                        </div>
-                    </div>
-                </article>
+                <?php partial('talent_card', ['c' => $cr, 'extra' => 'creator-card']); ?>
             <?php endforeach; ?>
             <a class="creator-card cc-join" href="<?= e(url('join')) ?>">
                 <?= mark_svg('') ?>
@@ -494,6 +502,7 @@ $matchData = [
             <p>Tell us about your brand or your channel. We reply within one business day.</p>
             <div class="ctas">
                 <a class="btn btn-light btn-lg" href="<?= e(url('contact?type=brand')) ?>" data-magnetic>Start a campaign <i class="ph-bold ph-arrow-up-right" aria-hidden="true"></i></a>
+                <?php if ($creators): ?><a class="btn btn-on-red btn-lg" href="<?= e(url('talent')) ?>">Browse talent</a><?php endif; ?>
                 <a class="btn btn-on-red btn-lg" href="<?= e(url('join')) ?>">Join as a creator</a>
             </div>
         </div>

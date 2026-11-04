@@ -162,8 +162,8 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                                         <?= $err($key . '_followers') ?>
                                     </div>
                                     <div class="field">
-                                        <label for="j-<?= e($key) ?>-v"><?= e($p['views']) ?> <span class="opt">(optional)</span></label>
-                                        <input class="input" id="j-<?= e($key) ?>-v" name="<?= e($key) ?>_avg_views" value="<?= e($data[$key . '_avg_views']) ?>" inputmode="decimal" placeholder="e.g. 12K" data-views data-count>
+                                        <label for="j-<?= e($key) ?>-v"><?= e($p['views']) ?></label>
+                                        <input class="input" id="j-<?= e($key) ?>-v" name="<?= e($key) ?>_avg_views" value="<?= e($data[$key . '_avg_views']) ?>" inputmode="decimal" placeholder="Optional, e.g. 12K" data-views data-count>
                                         <p class="count-hint" data-count-hint></p>
                                     </div>
                                 </div>
