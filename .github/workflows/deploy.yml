@@ -28,8 +28,10 @@ jobs:
             **/.git*/**
             **/.github*/**
             config.local.php
+            config.php
             storage/database.sqlite*
             storage/installed.lock
             uploads/**
             .claude/**
             .gemini/**
+
