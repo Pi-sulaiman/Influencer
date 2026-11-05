@@ -957,3 +957,6 @@ body.has-sl-tray .toast { bottom: 92px; }
 [data-theme="dark"] .logo-track li:hover img { filter: grayscale(1) brightness(0) invert(1); opacity: .95; }
 @keyframes logo-scroll { to { transform: translateX(calc(-50% - clamp(20px, 3vw, 40px))); } }
 @media (prefers-reduced-motion: reduce) { .logo-track { animation: none; flex-wrap: wrap; justify-content: center; width: auto; } .logo-track li[aria-hidden="true"] { display: none; } .logo-marquee { -webkit-mask-image: none; mask-image: none; } }
+
+/* A themed dropdown that is waiting for another choice */
+.pick-btn:disabled { opacity: .6; cursor: not-allowed; }

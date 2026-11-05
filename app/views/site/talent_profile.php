@@ -30,7 +30,7 @@ $quote = url('contact?type=brand&creators=' . rawurlencode($c['code']));
 
                 <div class="tp-stats">
                     <div><b><?= e(short_number($c['reach'])) ?></b><span>Total followers</span></div>
-                    <div><b><?= $c['views'] ? e(short_number($c['views'])) : '-' ?></b><span>Avg. impressions per post</span></div>
+                    <div><b><?= $c['views'] ? e(short_number($c['views'])) : '-' ?></b><span>Combined channel averages</span></div>
                     <div><b><?= $c['er'] !== null ? e($c['er'] + 0) . '%' : '-' ?></b><span>Engagement rate</span></div>
                     <div><b><?= $c['monthly'] ? e(short_number($c['monthly'])) : '-' ?></b><span>Impressions, last 30 days</span></div>
                 </div>

@@ -1,0 +1,8 @@
+Peakilo location lists
+
+IN.json: states and cities of India, extracted from the Countries States Cities Database by dr5hn
+(https://github.com/dr5hn/countries-states-cities-database), licensed under the Open Database License (ODbL) 1.0:
+https://opendatacommons.org/licenses/odbl/1-0/
+
+To add a country, extract it with the same layout ({"country", "iso2", "source", "states": {state: [cities]}})
+and add a migration that calls import_locations().

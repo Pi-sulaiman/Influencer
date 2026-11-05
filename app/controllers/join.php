@@ -65,7 +65,7 @@ function campaign_link($params)
 
 function join_fields()
 {
-    $fields = ['full_name', 'display_name', 'email', 'phone', 'city', 'country', 'gender', 'languages', 'primary_platform',
+    $fields = ['full_name', 'display_name', 'email', 'phone', 'city', 'state', 'country', 'gender', 'languages', 'primary_platform',
         'website', 'engagement_rate', 'monthly_impressions', 'audience_country', 'audience_age', 'audience_gender', 'past_brands',
         'fee_min', 'fee_max', 'currency', 'fee_notes', 'bio', 'pitch'];
     foreach (array_keys(platform_options()) as $p) {
@@ -125,6 +125,12 @@ function join_form()
         if ($data['phone'] === '') $errors['phone'] = 'Add your WhatsApp number so we can send you briefs.';
         elseif (!preg_match('/^[0-9+()\-\s.]{6,25}$/', $data['phone']) || strlen(preg_replace('/\D/', '', $data['phone'])) < 8) $errors['phone'] = 'Enter a valid WhatsApp number with country code.';
         if ($data['country'] === '') $errors['country'] = 'Tell us which country you are based in.';
+        // State and city are required: brands book by location.
+        $states = states_for($data['country']);
+        if ($data['state'] === '') $errors['state'] = 'Choose your state.';
+        elseif ($states && !in_array($data['state'], $states, true)) $errors['state'] = 'Choose your state from the list.';
+        $data['city'] = normalize_city($data['city'], $data['state'], $data['country']);
+        if (mb_strlen($data['city']) < 2) $errors['city'] = 'Tell us which city you are in.';
 
         // Only platforms switched on in Admin > Settings > Platforms are on the form.
         $platforms = enabled_platforms();
@@ -133,7 +139,12 @@ function join_form()
             if ($data[$p] === '') continue;
             $hasChannel = true;
             if (!profile_link_matches($p, $data[$p])) $errors[$p] = 'That link does not look like a ' . $meta['label'] . ' profile.';
-            if (!parse_count($data[$p . '_followers'])) $errors[$p . '_followers'] = 'Add your ' . $meta['label'] . ' ' . ($p === 'youtube' ? 'subscriber' : 'follower') . ' count.';
+            // Unavailable/hidden stats must not block registration. Zero is a valid count.
+            foreach (['_followers', '_avg_views'] as $suffix) {
+                if ($data[$p . $suffix] !== '' && (!preg_match('/^\d+(?:\.\d+)?[km]?$/i', str_replace([',', ' '], '', $data[$p . $suffix])) || parse_count($data[$p . $suffix]) > 2000000000)) {
+                    $errors[$p . $suffix] = 'Enter a valid non-negative count, or leave it blank.';
+                }
+            }
         }
         if (!$hasChannel) $errors['channels'] = 'Add at least one social channel.';
         if (!$data['niches']) $errors['niches'] = 'Pick at least one niche.';
@@ -193,6 +204,7 @@ function join_form()
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?: null,
                 'city' => $data['city'] ?: null,
+                'state' => $data['state'] ?: null,
                 'country' => $data['country'],
                 'gender' => $data['gender'] ?: null,
                 'languages' => $data['languages'] ?: null,
@@ -236,8 +248,10 @@ function join_form()
                 $impressions += (int) $views;
             }
             $row['total_followers'] = $followers;
-            // Combined average impressions per post across every channel.
+            // Legacy column: sum of per-channel averages, NOT measured impressions.
             $row['avg_impressions'] = $impressions ?: null;
+            $previousMetrics = json_decode($existing['social_metrics'] ?? '{}', true) ?: [];
+            $row['social_metrics'] = json_encode(social_submission_metadata($data, $platforms, $previousMetrics));
             if (!$row['primary_platform']) {
                 // The biggest channel becomes the main platform.
                 $best = 0;
@@ -287,7 +301,7 @@ function join_form()
 
             send_mail(setting('contact_email'), 'New creator: ' . $data['full_name'] . ($campaign ? ' (' . $campaign['title'] . ')' : ''),
                 "{$data['full_name']} just " . ($existing ? 'updated their profile' : 'joined the creator network') . ".\n"
-                . "Email: {$data['email']}\nFollowers: " . number_format($followers) . "\nAvg. impressions per post: " . number_format($impressions) . "\nFee: " . fee_range($feeMin, $feeMax, $data['currency']) . "\n"
+                . "Email: {$data['email']}\nFollowers: " . number_format($followers) . "\nCombined channel averages: " . number_format($impressions) . "\nFee: " . fee_range($feeMin, $feeMax, $data['currency']) . "\n"
                 . ($campaign ? "Campaign: {$campaign['title']}\n" : '')
                 . "\nView profile: " . abs_url('admin/influencers/' . $influencerId));
 
@@ -305,7 +319,7 @@ function join_form()
         'canonical' => abs_url('join'),
         'robots' => $campaign ? 'noindex, follow' : null,
         'body_class' => 'page-join',
-        'scripts' => ['js/join.js'],
+        'scripts' => ['js/join.js', 'js/social-metrics.js'],
         'styles' => ['css/join.css'],
     ]);
 }

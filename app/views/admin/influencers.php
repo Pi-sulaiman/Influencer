@@ -1,8 +1,9 @@
 <?php
-/** @var array $f @var array $rows @var array $pg @var array $campaigns @var string $view @var array $statusCounts */
+/** @var array $f @var array $rows @var array $pg @var array $campaigns @var string $view @var array $statusCounts @var array $loc */
 $platforms = platform_options();
 $allCount = array_sum($statusCounts);
-$moreOpen = $f['niche'] || $f['platform'] || $f['country'] || $f['min_followers'] || $f['max_fee'] !== null || $f['featured'];
+$moreOpen = $f['niche'] || $f['platform'] || $f['min_followers'] || $f['max_fee'] !== null || $f['featured'];
+$locLink = function ($set) { return url('admin/influencers' . qs(array_merge(['page' => null], $set))); };
 ?>
 <div class="page-head">
     <div>
@@ -44,7 +45,20 @@ $moreOpen = $f['niche'] || $f['platform'] || $f['country'] || $f['min_followers'
             </select></div>
         <button class="btn btn-ghost" type="button" data-toggle-filters aria-expanded="<?= $moreOpen ? 'true' : 'false' ?>"><i class="ph ph-sliders-horizontal"></i>More filters</button>
         <button class="btn btn-dark" type="submit">Apply</button>
-        <?php if (array_filter([$f['q'], $f['campaign'], $f['niche'], $f['platform'], $f['country'], $f['min_followers'], $f['max_fee'], $f['featured']])): ?>
+        <div class="field"><label for="fco">Country</label>
+            <select class="select" id="fco" name="country" onchange="this.form.state.value='';this.form.city.value='';this.form.submit()"><option value="">All countries</option>
+                <?php foreach ($loc['countries'] as $c): ?><option value="<?= e($c['k']) ?>"<?= $f['country'] === $c['k'] ? ' selected' : '' ?>><?= e($c['k']) ?> (<?= (int) $c['n'] ?>)</option><?php endforeach; ?>
+                <?php if ($f['country'] !== '' && !in_array($f['country'], array_column($loc['countries'], 'k'), true)): ?><option value="<?= e($f['country']) ?>" selected><?= e($f['country']) ?> (0)</option><?php endif; ?>
+            </select></div>
+        <div class="field"><label for="fst">State</label>
+            <select class="select" id="fst" name="state" onchange="this.form.city.value='';this.form.submit()"<?= $f['country'] === '' ? ' disabled title="Choose a country first"' : '' ?>><option value=""><?= $f['country'] === '' ? 'Choose a country first' : 'All states' ?></option>
+                <?php foreach ($loc['states'] as $c): ?><option value="<?= e($c['k']) ?>"<?= $f['state'] === $c['k'] ? ' selected' : '' ?>><?= e($c['k']) ?> (<?= (int) $c['n'] ?>)</option><?php endforeach; ?>
+            </select></div>
+        <div class="field"><label for="fci">City</label>
+            <select class="select" id="fci" name="city" onchange="this.form.submit()"<?= $f['country'] === '' ? ' disabled title="Choose a country first"' : '' ?>><option value=""><?= $f['country'] === '' ? 'Choose a country first' : 'All cities' ?></option>
+                <?php foreach ($loc['cities'] as $c): ?><option value="<?= e($c['k']) ?>"<?= $f['city'] === $c['k'] ? ' selected' : '' ?>><?= e($c['k']) ?> (<?= (int) $c['n'] ?>)</option><?php endforeach; ?>
+            </select></div>
+        <?php if (array_filter([$f['q'], $f['campaign'], $f['niche'], $f['platform'], $f['country'], $f['state'], $f['city'], $f['min_followers'], $f['max_fee'], $f['featured']])): ?>
             <a class="btn btn-ghost" href="<?= e(url('admin/influencers' . ($f['status'] ? '?status=' . $f['status'] : ''))) ?>">Clear</a>
         <?php endif; ?>
         <div class="more-filters" data-more-filters<?= $moreOpen ? '' : ' hidden' ?>>
@@ -56,12 +70,35 @@ $moreOpen = $f['niche'] || $f['platform'] || $f['country'] || $f['min_followers'
                 <select class="select" id="fp" name="platform"><option value="">Any platform</option>
                     <?php foreach ($platforms as $k => $p): ?><option value="<?= $k ?>"<?= $f['platform'] === $k ? ' selected' : '' ?>><?= e($p['label']) ?></option><?php endforeach; ?>
                 </select></div>
-            <div class="field"><label for="fco">Country</label><input class="input" id="fco" name="country" value="<?= e($f['country']) ?>" list="countries"><datalist id="countries"><?php foreach (country_options() as $c): ?><option value="<?= e($c) ?>"><?php endforeach; ?></datalist></div>
             <div class="field"><label for="fmf">Min. reach</label><input class="input" id="fmf" name="min_followers" value="<?= $f['min_followers'] ? e(short_number($f['min_followers'])) : '' ?>" placeholder="e.g. 50K"></div>
             <div class="field"><label for="fmx">Starting fee up to</label><input class="input" id="fmx" name="max_fee" value="<?= $f['max_fee'] !== null ? e($f['max_fee'] + 0) : '' ?>" inputmode="decimal" placeholder="e.g. 500"></div>
             <div class="field" style="min-width:auto;flex:0"><label>&nbsp;</label><label class="check" style="height:38px;align-items:center"><input type="checkbox" name="featured" value="1"<?= $f['featured'] === '1' ? ' checked' : '' ?>>Featured</label></div>
         </div>
     </form>
+
+    <?php
+    // Where the creators are: click a place to filter by it.
+    if ($f['country'] === '') { $chips = $loc['countries']; $chipKey = 'country'; $chipTitle = 'Creators by country'; }
+    elseif ($f['state'] === '' && $loc['states']) { $chips = $loc['states']; $chipKey = 'state'; $chipTitle = 'States in ' . $f['country']; }
+    else { $chips = $loc['cities']; $chipKey = 'city'; $chipTitle = 'Cities in ' . ($f['state'] !== '' ? $f['state'] : $f['country']); }
+    ?>
+    <?php if ($chips || $f['country'] !== ''): ?>
+        <div class="loc-bar">
+            <span class="loc-title"><i class="ph ph-map-pin"></i><?= e($chipTitle) ?></span>
+            <div class="loc-chips">
+                <?php foreach (array_slice($chips, 0, 24) as $c): ?>
+                    <a class="loc-chip<?= $f[$chipKey] === $c['k'] ? ' is-active' : '' ?>" href="<?= e($locLink($chipKey === 'country' ? ['country' => $c['k'], 'state' => null, 'city' => null] : ($chipKey === 'state' ? ['state' => $c['k'], 'city' => null] : ['city' => $c['k']]))) ?>"><?= e($c['k']) ?><b><?= (int) $c['n'] ?></b></a>
+                <?php endforeach; ?>
+                <?php if (!$chips): ?><span class="small muted">No creators with a saved <?= e($chipKey) ?> yet.</span><?php endif; ?>
+                <?php if ($f['country'] !== ''): ?><a class="loc-chip loc-clear" href="<?= e($locLink(['country' => null, 'state' => null, 'city' => null])) ?>"><i class="ph ph-x"></i>All places</a><?php endif; ?>
+            </div>
+            <?php if ($f['country'] !== '' && $f['state'] === '' && $loc['states'] && $loc['cities']): ?>
+                <div class="loc-chips loc-sub"><span class="small muted">Top cities:</span>
+                    <?php foreach (array_slice($loc['cities'], 0, 12) as $c): ?><a class="loc-chip" href="<?= e($locLink(['city' => $c['k']])) ?>"><?= e($c['k']) ?><b><?= (int) $c['n'] ?></b></a><?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
     <?php if (!$rows): ?>
         <div class="empty" style="border-top:1px solid var(--line)">
@@ -101,7 +138,7 @@ $moreOpen = $f['niche'] || $f['platform'] || $f['country'] || $f['min_followers'
                         </div>
                         <div class="ic-body">
                             <div class="ic-name"><a href="<?= e(url('admin/influencers/' . $r['id'])) ?>"><?= e($r['full_name']) ?></a><?php if (!empty($r['display_name'])): ?> <span class="small muted"><?= e($r['display_name']) ?></span><?php endif; ?></div>
-                            <div class="ic-loc"><?= e(trim($r['city'] . ', ' . $r['country'], ', ')) ?: '&nbsp;' ?></div>
+                            <div class="ic-loc"><?= e(implode(', ', array_filter([$r['city'], $r['state'] ?? '', $r['country']]))) ?: '&nbsp;' ?></div>
                             <div class="tags"><?php foreach (array_slice(csv_list($r['niches']), 0, 3) as $n): ?><span class="tag"><?= e($n) ?></span><?php endforeach; ?></div>
                             <div class="ic-stats">
                                 <div><b><?= e(short_number($r['total_followers'])) ?></b><span>followers<?= !empty($r['avg_impressions']) ? ' &middot; ' . e(short_number($r['avg_impressions'])) . ' avg. views' : '' ?></span></div>

@@ -255,7 +255,7 @@
     ctx.lineWidth = 2;
     ctx.stroke();
     var stats = [[compact(data.followers), 'Followers']];
-    stats.push(data.views ? [compact(data.views), 'Avg. views'] : [String((data.channels || []).length || 1), (data.channels || []).length === 1 ? 'Platform' : 'Platforms']);
+    stats.push(data.views ? [compact(data.views), 'Combined averages'] : [String((data.channels || []).length || 1), (data.channels || []).length === 1 ? 'Platform' : 'Platforms']);
     stats.push(data.er !== null && data.er !== undefined ? [(Math.round(data.er * 10) / 10) + '%', 'Engagement'] : [data.languages && data.languages.length ? data.languages[0] : (data.tier || '-'), data.languages && data.languages.length ? 'Language' : 'Size']);
     var colW = (W - P * 2) / 3;
     stats.forEach(function (st, i) {

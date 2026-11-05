@@ -118,7 +118,7 @@ function admin_dashboard()
 
 /* ---------------- Influencers ---------------- */
 
-function influencer_filters()
+function influencer_filters($skip = [])
 {
     $f = [
         'q' => mb_substr(query('q'), 0, 80),
@@ -127,6 +127,8 @@ function influencer_filters()
         'niche' => query('niche'),
         'platform' => query('platform'),
         'country' => mb_substr(query('country'), 0, 80),
+        'state' => mb_substr(query('state'), 0, 120),
+        'city' => mb_substr(query('city'), 0, 120),
         'min_followers' => parse_count(query('min_followers')),
         'max_fee' => to_money_or_null(query('max_fee')),
         'featured' => query('featured'),
@@ -155,9 +157,12 @@ function influencer_filters()
     if (array_key_exists($f['platform'], platform_options())) {
         $where[] = "(i.{$f['platform']} IS NOT NULL AND i.{$f['platform']} <> '')";
     }
-    if ($f['country'] !== '') {
-        $where[] = 'i.country LIKE ?';
-        $args[] = '%' . $f['country'] . '%';
+    // Location: exact country, state and city (the breakdown counts skip these).
+    foreach (['country', 'state', 'city'] as $k) {
+        if ($f[$k] !== '' && !in_array($k, $skip, true)) {
+            $where[] = "i.$k = ?";
+            $args[] = $f[$k];
+        }
     }
     if ($f['min_followers']) {
         $where[] = 'i.total_followers >= ?';
@@ -200,7 +205,17 @@ function admin_influencers()
     foreach (all('SELECT status, COUNT(*) AS n FROM influencers WHERE is_demo = 0 GROUP BY status') as $r) {
         $statusCounts[$r['status']] = (int) $r['n'];
     }
-    admin_render('influencers', compact('f', 'rows', 'pg', 'campaigns', 'view', 'statusCounts'), 'Influencers');
+    // Location breakdown: countries, then states in the chosen country, then cities.
+    list(, $baseWhere, $baseArgs) = influencer_filters(['country', 'state', 'city']);
+    $loc = ['countries' => [], 'states' => [], 'cities' => []];
+    $loc['countries'] = all("SELECT i.country AS k, COUNT(*) AS n FROM influencers i$baseWhere AND i.country IS NOT NULL AND i.country <> '' GROUP BY i.country ORDER BY n DESC, i.country", $baseArgs);
+    if ($f['country'] !== '') {
+        $loc['states'] = all("SELECT i.state AS k, COUNT(*) AS n FROM influencers i$baseWhere AND i.country = ? AND i.state IS NOT NULL AND i.state <> '' GROUP BY i.state ORDER BY n DESC, i.state", array_merge($baseArgs, [$f['country']]));
+        $cityWhere = $baseWhere . ' AND i.country = ?' . ($f['state'] !== '' ? ' AND i.state = ?' : '');
+        $cityArgs = array_merge($baseArgs, [$f['country']], $f['state'] !== '' ? [$f['state']] : []);
+        $loc['cities'] = all("SELECT i.city AS k, COUNT(*) AS n FROM influencers i$cityWhere AND i.city IS NOT NULL AND i.city <> '' GROUP BY i.city ORDER BY n DESC, i.city", $cityArgs);
+    }
+    admin_render('influencers', compact('f', 'rows', 'pg', 'campaigns', 'view', 'statusCounts', 'loc'), 'Influencers');
 }
 
 function admin_influencers_bulk()
@@ -269,7 +284,7 @@ function csv_download($filename, array $header, array $rows)
 function influencer_csv_row(array $i)
 {
     $rates = rate_card($i['rate_card'] ?? '');
-    $row = [$i['id'], creator_code($i['id']), $i['full_name'], $i['display_name'] ?? '', $i['email'], $i['phone'], $i['city'], $i['country'], $i['gender'], $i['languages'], $i['primary_platform']];
+    $row = [$i['id'], creator_code($i['id']), $i['full_name'], $i['display_name'] ?? '', $i['email'], $i['phone'], $i['city'], $i['state'] ?? '', $i['country'], $i['gender'], $i['languages'], $i['primary_platform']];
     foreach (array_keys(platform_options()) as $p) {
         array_push($row, $i[$p], $i[$p . '_followers'], $i[$p . '_avg_views'] ?? '');
     }
@@ -286,11 +301,11 @@ function influencer_csv_row(array $i)
 
 function influencer_csv_header()
 {
-    $h = ['ID', 'Creator code', 'Full name', 'Creator name', 'Email', 'Phone', 'City', 'Country', 'Gender', 'Languages', 'Main platform'];
+    $h = ['ID', 'Creator code', 'Full name', 'Creator name', 'Email', 'Phone', 'City', 'State', 'Country', 'Gender', 'Languages', 'Main platform'];
     foreach (platform_options() as $p) {
         array_push($h, $p['label'], $p['label'] . ' followers', $p['label'] . ' avg. views');
     }
-    array_push($h, 'Total followers', 'Avg. impressions per post (all channels)', 'Impressions last 30 days', 'Engagement %',
+    array_push($h, 'Total followers', 'Combined channel averages (not impressions)', 'Impressions last 30 days', 'Engagement %',
         'Audience country', 'Audience age', 'Audience gender', 'Niches', 'Content types', 'Past brands', 'Currency', 'Fee min', 'Fee max');
     foreach (rate_card_options() as $r) {
         $h[] = 'Rate: ' . $r[0];

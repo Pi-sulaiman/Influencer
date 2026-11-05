@@ -6,7 +6,7 @@
 // PHP built-in server (local testing): serve real static files directly.
 if (PHP_SAPI === 'cli-server') {
     $file = __DIR__ . urldecode(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
-    if (preg_match('#/(app|storage)/|config(\.local)?\.php$#', $file)) {
+    if (preg_match('#/(app|storage|services|tests|docs)/|config(\.local)?\.php$#', $file)) {
         http_response_code(403);
         exit('Forbidden');
     }
@@ -48,6 +48,8 @@ $routes = [
     ['GET',      '/c/{code}',                 'campaign_link'],
     ['GET|POST', '/join',                     'join_form'],
     ['GET',      '/join/thanks',              'join_thanks'],
+    ['GET',      '/locations/cities',         'locations_cities_json'],
+    ['POST',     '/api/social-profile',       'social_profile_lookup'],
 
     // One-time installer
     ['GET|POST', '/install',                  'install_run'],

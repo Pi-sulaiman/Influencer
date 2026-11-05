@@ -40,4 +40,11 @@ return [
 
     // Max size for uploaded photos, in megabytes.
     'upload_max_mb' => 5,
+
+    // Private Python lookup service. See docs/social-metrics.md for cPanel setup.
+    // Keep the shared secret in config.local.php or environment variables.
+    'social_metrics' => [
+        'service_url' => getenv('SOCIAL_METRICS_URL') ?: '',
+        'service_token' => getenv('SOCIAL_METRICS_TOKEN') ?: '',
+    ],
 ];
