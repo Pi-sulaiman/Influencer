@@ -459,7 +459,7 @@ function content_type_options()
 function platform_options()
 {
     return [
-        'instagram' => ['label' => 'Instagram', 'icon' => 'ph-instagram-logo', 'placeholder' => 'instagram.com/yourname', 'domains' => ['instagram.com', 'instagr.am'], 'views' => 'Avg. views per reel'],
+        'instagram' => ['label' => 'Instagram', 'icon' => 'ph-instagram-logo', 'placeholder' => 'instagram.com/yourname', 'domains' => ['instagram.com', 'instagr.am'], 'views' => 'Avg. video views / plays'],
         'youtube'   => ['label' => 'YouTube',   'icon' => 'ph-youtube-logo',   'placeholder' => 'youtube.com/@channel',   'domains' => ['youtube.com', 'youtu.be'], 'views' => 'Avg. views per video'],
         'tiktok'    => ['label' => 'TikTok',    'icon' => 'ph-tiktok-logo',    'placeholder' => 'tiktok.com/@yourname',   'domains' => ['tiktok.com'], 'views' => 'Avg. views per video'],
         'facebook'  => ['label' => 'Facebook',  'icon' => 'ph-facebook-logo',  'placeholder' => 'facebook.com/yourpage',  'domains' => ['facebook.com', 'fb.com', 'fb.me'], 'views' => 'Avg. reach per post'],
@@ -506,6 +506,10 @@ function platform_list_text($limit = 0)
  */
 function profile_link_matches($platform, $value)
 {
+    if (function_exists('social_profile_identity')) {
+        try { social_profile_identity($platform, $value); return true; }
+        catch (InvalidArgumentException $e) { return false; }
+    }
     $value = trim((string) $value);
     if ($value === '' || !preg_match('#[/.]#', ltrim($value, '@'))) {
         return true; // a bare handle

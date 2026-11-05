@@ -250,8 +250,25 @@
     if (input) input.addEventListener('input', function () { filter(input.value); });
     select.addEventListener('change', refresh);
     refresh();
-    select.__picker = { refresh: refresh, open: open, close: close, button: btn };
+    var destroy = function () {
+      close(false);
+      select.removeEventListener('change', refresh);
+      wrap.parentNode.insertBefore(select, wrap);
+      wrap.remove();
+      if (pop.parentNode) pop.remove();
+      select.classList.remove('pick-native');
+      select.removeAttribute('tabindex');
+      select.removeAttribute('aria-hidden');
+      if (select.id) { var l = document.querySelector('label[for="' + btn.id + '"]'); if (l) l.htmlFor = select.id; }
+      delete select.__picker;
+    };
+    select.__picker = { refresh: refresh, open: open, close: close, button: btn, destroy: destroy };
     return select.__picker;
+  };
+  // Rebuild a picker after its <option> list changed (e.g. states for a new country).
+  Pk.rebuildPicker = function (select) {
+    if (select.__picker && select.__picker.destroy) select.__picker.destroy();
+    return Pk.enhancePicker(select);
   };
   $$('select[data-picker]').forEach(Pk.enhancePicker);
 

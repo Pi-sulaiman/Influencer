@@ -23,5 +23,11 @@ uploads/testimonials/*
 *.log
 .DS_Store
 Thumbs.db
+storage/social/
+storage/social-test-*
+storage/social-browser-test.png
+services/social-metrics/.venv/
+__pycache__/
+*.pyc
 uploads/logos/*
 !uploads/logos/.gitkeep

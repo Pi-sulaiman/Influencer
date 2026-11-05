@@ -1,6 +1,7 @@
 <?php
 /** @var array $inf @var array $apps @var mixed $prevId @var mixed $nextId */
 $platforms = platform_options();
+$socialMetrics = json_decode($inf['social_metrics'] ?? '{}', true) ?: [];
 $wa = preg_replace('/\D/', '', (string) $inf['phone']);
 $rates = rate_card($inf['rate_card'] ?? '');
 $tier = creator_tier($inf['total_followers']);
@@ -37,7 +38,7 @@ $tier = creator_tier($inf['total_followers']);
                     <?php if ($inf['featured']): ?><span class="badge no-dot" style="background:#FFF4D6;color:#8A5A00"><i class="ph-fill ph-star"></i>Featured on site</span><?php endif; ?>
                 </div>
                 <div class="profile-meta">
-                    <?php if ($inf['city'] || $inf['country']): ?><span><i class="ph ph-map-pin"></i><?= e(trim($inf['city'] . ', ' . $inf['country'], ', ')) ?></span><?php endif; ?>
+                    <?php if ($inf['city'] || $inf['country']): ?><span><i class="ph ph-map-pin"></i><?= e(implode(', ', array_filter([$inf['city'], $inf['state'] ?? '', $inf['country']]))) ?></span><?php endif; ?>
                     <?php if ($inf['gender']): ?><span><i class="ph ph-user"></i><?= e($inf['gender']) ?></span><?php endif; ?>
                     <?php if ($inf['languages']): ?><span><i class="ph ph-translate"></i><?= e($inf['languages']) ?></span><?php endif; ?>
                     <?php if ($inf['primary_platform']): ?><span><i class="ph-fill <?= e($platforms[$inf['primary_platform']]['icon'] ?? 'ph-globe') ?>"></i>Main: <?= e($platforms[$inf['primary_platform']]['label'] ?? $inf['primary_platform']) ?></span><?php endif; ?>
@@ -52,7 +53,7 @@ $tier = creator_tier($inf['total_followers']);
                 </div>
                 <div class="profile-stats">
                     <div><b><?= e(short_number($inf['total_followers'])) ?></b><span>Total followers</span></div>
-                    <div><b><?= !empty($inf['avg_impressions']) ? e(short_number($inf['avg_impressions'])) : '-' ?></b><span>Avg. impressions per post</span></div>
+                    <div><b><?= !empty($inf['avg_impressions']) ? e(short_number($inf['avg_impressions'])) : '-' ?></b><span>Combined channel averages</span></div>
                     <div><b><?= !empty($inf['monthly_impressions']) ? e(short_number($inf['monthly_impressions'])) : '-' ?></b><span>Impressions, last 30 days</span></div>
                     <div><b><?= $inf['engagement_rate'] !== null ? e($inf['engagement_rate'] + 0) . '%' : '-' ?></b><span>Engagement rate</span></div>
                     <div class="fee"><b><?= e(fee_range($inf['fee_min'], $inf['fee_max'], $inf['currency'])) ?></b><span>Fee range (<?= e($inf['currency']) ?>)</span></div>
@@ -71,6 +72,17 @@ $tier = creator_tier($inf['total_followers']);
                             <div style="min-width:0"><div class="s-handle"><?= e($inf[$k]) ?></div><div class="small muted"><?= e($p['label']) ?><?= !empty($inf[$k . '_avg_views']) ? ' &middot; ' . e(short_number($inf[$k . '_avg_views'])) . ' avg. views' : '' ?></div></div>
                             <span class="s-count"><?= $inf[$k . '_followers'] !== null ? e(short_number($inf[$k . '_followers'])) : '-' ?></span>
                         </a>
+                        <?php $metric = $socialMetrics[$k] ?? null; if ($metric): ?>
+                            <div class="small muted">
+                                Followers: <?= ($metric['followers_source'] ?? '') === 'fetched' ? 'automatically fetched' : 'self-reported / unavailable' ?>.
+                                Average views: <?= ($metric['views_source'] ?? '') === 'fetched' ? 'automatically fetched' : 'self-reported / unavailable' ?>.
+                                <?php if (!empty($metric['lookup'])): $lookup = $metric['lookup']; ?>
+                                    <?= e($lookup['source'] ?? '') ?> · <?= (int) ($lookup['sample_size'] ?? 0) ?> videos with view counts.
+                                    Checked <?= e($lookup['fetched_at'] ?? '') ?>.
+                                    <?= e($lookup['sample_description'] ?? '') ?>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
                     <?php endforeach; ?>
                     <?php if ($inf['website']): $any = true; ?>
                         <a class="social-row" href="<?= e(preg_match('#^https?://#', $inf['website']) ? $inf['website'] : 'https://' . $inf['website']) ?>" target="_blank" rel="noopener"><i class="ph ph-globe"></i><div style="min-width:0"><div class="s-handle"><?= e($inf['website']) ?></div><div class="small muted">Website or media kit</div></div><i class="ph ph-arrow-up-right" style="margin-left:auto;font-size:16px"></i></a>

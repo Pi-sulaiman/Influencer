@@ -17,7 +17,7 @@ $slAttrs = 'data-shortlist data-code="' . e($c['code']) . '" data-name="' . e($c
         <div class="tc-loc"><?= e(implode(', ', array_slice($c['niches'], 0, 2))) ?><?= $c['city'] || $c['country'] ? ' &middot; ' . e($c['city'] ?: $c['country']) : '' ?></div>
         <div class="tc-stats">
             <div><b><?= e(short_number($c['reach'])) ?></b><span>followers</span></div>
-            <div><b><?= $c['views'] ? e(short_number($c['views'])) : '-' ?></b><span>avg. views</span></div>
+            <div><b><?= $c['views'] ? e(short_number($c['views'])) : '-' ?></b><span>combined averages</span></div>
             <div><b><?= $c['er'] !== null ? e($c['er'] + 0) . '%' : '-' ?></b><span>engagement</span></div>
         </div>
         <div class="tc-chans">

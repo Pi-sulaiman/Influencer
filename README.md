@@ -143,3 +143,8 @@ assets/js/             site.js, motion.js (GSAP), home.js (hero), brief.js, join
 uploads/               creator photos, blog and campaign images
 storage/               install lock (and the local SQLite file)
 ```
+# Automatic social stats
+
+The creator form supports automatic Instagram, YouTube and TikTok profile metrics
+through a private Python app. See [cPanel setup and supported metrics](docs/social-metrics.md).
+The Python service and its secret must be configured before live lookup works.

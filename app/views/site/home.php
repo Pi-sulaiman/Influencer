@@ -124,7 +124,7 @@ $matchData = [
                             <?php for ($dup = 0; $dup < 2; $dup++): foreach ($col as $item): ?>
                                 <?php if ($item['type'] === 'creator'):
                                     $pIcon = $platformMeta[$item['primary']]['icon'] ?? 'ph-globe'; ?>
-                                    <div class="wcard wcard-creator" data-niches="<?= e(implode('|', $item['niches'])) ?>" data-plats="<?= e(implode('|', $item['platforms'])) ?>">
+                                    <div class="wcard wcard-creator" data-niches="<?= e(implode('|', $item['niches'])) ?>" data-plats="<?= e(implode('|', $item['platforms'])) ?>"<?= !empty($item['demo']) ? ' data-demo' : '' ?>>
                                         <img src="<?= e($item['photo']) ?>" alt="" loading="<?= $dup ? 'lazy' : 'eager' ?>" width="240" height="300"<?= photo_fallback_attr($item) ?>>
                                         <span class="wc-reach"><i class="ph-fill <?= e($pIcon) ?>"></i><?= e(short_number($item['reach'])) ?></span>
                                         <span class="wc-info"><b><?= e($item['first']) ?></b><small><?= e($item['niches'][0] ?? 'Creator') ?><?= $item['city'] ? ' &middot; ' . e($item['city']) : '' ?></small></span>

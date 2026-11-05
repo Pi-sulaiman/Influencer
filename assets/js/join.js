@@ -59,7 +59,11 @@
     if (n >= 1e4) return 'Micro';
     return n > 0 ? 'Nano' : '';
   };
+  var stateEl = function () {
+    return form.querySelector('[data-state-select]:not([disabled])') || form.querySelector('[data-state-text]:not([disabled])');
+  };
   var val = function (name) {
+    if (name === 'state') { var st = stateEl(); return st ? String(st.value || '').trim() : ''; }
     if (name === 'languages') {
       var ls = form.querySelector('[data-languages]');
       if (ls) return Array.prototype.filter.call(ls.options, function (o) { return o.selected; }).map(function (o) { return o.value; }).join(', ');
@@ -70,6 +74,12 @@
   /* ---------- Profile links ---------- */
   var hostOf = function (v) {
     v = String(v || '').trim();
+    var isDomain = $$('[data-channel]').some(function (ch) {
+      return (ch.dataset.domains || '').split(',').some(function (domain) {
+        return v.toLowerCase().replace(/^(www|m|mobile)\./, '') === domain;
+      });
+    });
+    if (/^@/.test(v) || (/^[a-z0-9_.-]+$/i.test(v) && !isDomain)) return '';
     if (!/[\/.]/.test(v.replace(/^@/, ''))) return '';
     try { return new URL(/^https?:\/\//i.test(v) ? v : 'https://' + v).hostname.toLowerCase().replace(/^(www|m|mobile)\./, ''); } catch (e) { return '?'; }
   };
@@ -177,6 +187,8 @@
       check(val('phone') !== '', form.elements.phone, 'Add your WhatsApp number so we can send you briefs.');
       if (val('phone') !== '') check(/^[0-9+()\-\s.]{6,25}$/.test(val('phone')) && val('phone').replace(/\D/g, '').length >= 8, form.elements.phone, 'Enter a valid WhatsApp number with country code.');
       check(val('country') !== '', form.elements.country, 'Tell us which country you are based in.');
+      if (stateEl()) check(val('state') !== '', stateEl(), 'Choose your state.');
+      check(val('city').length >= 2, form.elements.city, 'Tell us which city you are in.');
       check(photo.files.length > 0 || serverPhotoOk, photo, 'Please add a profile photo.');
     }
     if (i === 1) {
@@ -187,7 +199,9 @@
         any = true;
         var label = PLATFORMS[ch.dataset.channel].label;
         check(linkMatches(ch, link.value), link, 'That link does not look like a ' + label + ' profile.');
-        check(parseCount(fol.value) > 0, fol, 'Add your ' + label + ' ' + (ch.dataset.channel === 'youtube' ? 'subscriber' : 'follower') + ' count.');
+        [fol, ch.querySelector('[data-views]')].forEach(function (field) {
+          check(field.value.trim() === '' || (/^\d+(?:\.\d+)?[km]?$/i.test(field.value.replace(/[, ]/g, '')) && parseCount(field.value) <= 2000000000), field, 'Enter a valid non-negative count, or leave it blank.');
+        });
       });
       check(any, $('[data-channels]'), 'Add at least one social channel.');
       check($$('[name="niches[]"]:checked').length > 0, $('[data-niches]'), 'Pick at least one niche.');
@@ -331,7 +345,9 @@
     if (!target) return;
     setChannel(target, true);
     target.querySelector('[data-preview-handle]').value = link.value;
+    target.querySelector('[data-preview-handle]').dispatchEvent(new Event('input', { bubbles: true }));
     link.value = '';
+    link.dispatchEvent(new Event('input', { bubbles: true }));
     if (!ch.querySelector('[data-followers]').value) setChannel(ch, false);
     refreshChannels();
     updatePreview();
@@ -390,13 +406,14 @@
     if (!ch) { toast('We could not tell which platform that link is from'); return; }
     setChannel(ch, true);
     ch.querySelector('[data-preview-handle]').value = v;
+    ch.querySelector('[data-preview-handle]').dispatchEvent(new Event('input', { bubbles: true }));
     inp.value = '';
     refreshChannels();
     updatePreview();
     ch.classList.add('flash');
     setTimeout(function () { ch.classList.remove('flash'); }, 900);
     ch.querySelector('[data-followers]').focus();
-    toast(PLATFORMS[ch.dataset.channel].label + ' added. Now add your follower count.');
+    toast(PLATFORMS[ch.dataset.channel].label + ' added. Checking available stats.');
   }
   if (smart) {
     smart.addEventListener('paste', function () { setTimeout(function () { smartAdd(smart); }, 0); });
@@ -552,7 +569,7 @@
     saveTimer = setTimeout(function () {
       var out = {};
       $$('input, select, textarea').forEach(function (el) {
-        if (!el.name || skip.test(el.name) || el.type === 'range' || el.type === 'file') return;
+        if (!el.name || skip.test(el.name) || el.type === 'range' || el.type === 'file' || el.disabled || el.name === 'state') return;
         if (el.type === 'checkbox' || el.type === 'radio') {
           if (el.checked) (out[el.name] = out[el.name] || []).push(el.value);
         } else if (el.multiple) {
@@ -561,6 +578,7 @@
         } else if (el.value !== '') out[el.name] = el.value;
       });
       out._on = $$('[data-channel].is-on').map(function (c) { return c.dataset.channel; });
+      out._state = val('state');
       out._step = reached;
       try { localStorage.setItem(DRAFT, JSON.stringify(out)); } catch (err) {}
     }, 400);
@@ -573,7 +591,7 @@
     if (!d || typeof d !== 'object') return false;
     var any = false;
     $$('input, select, textarea').forEach(function (el) {
-      if (!el.name || skip.test(el.name) || el.type === 'range' || el.type === 'file' || !(el.name in d)) return;
+      if (!el.name || skip.test(el.name) || el.type === 'range' || el.type === 'file' || el.name === 'state' || !(el.name in d)) return;
       if (el.type === 'checkbox' || el.type === 'radio') el.checked = [].concat(d[el.name]).indexOf(el.value) !== -1;
       else if (el.multiple) Array.prototype.forEach.call(el.options, function (o) { o.selected = [].concat(d[el.name]).indexOf(o.value) !== -1; });
       else el.value = d[el.name];
@@ -581,6 +599,7 @@
     });
     $$('select').forEach(function (sel) { if (sel.__picker) sel.__picker.refresh(); });
     if (Array.isArray(d._on)) $$('[data-channel]').forEach(function (ch) { setChannel(ch, d._on.indexOf(ch.dataset.channel) !== -1); });
+    draftState = d._state || '';
     if (any) {
       feeTouched = feeMin.value !== '' || feeMax.value !== '';
       applySymbol();
@@ -592,6 +611,7 @@
   form.addEventListener('input', saveDraft);
   form.addEventListener('change', saveDraft);
   var draftNote = doc$('[data-draft-note]');
+  var draftState = '';
   var restored = restoreDraft();
   if (restored && draftNote) {
     draftNote.hidden = false;
@@ -642,7 +662,142 @@
     }
   }
   if (countrySel) countrySel.addEventListener('change', dialFill);
+
+  /* ---------- State list for the country, city suggestions for the state ---------- */
+  var LOC = {};
+  try { LOC = JSON.parse(form.querySelector('[data-locations]').textContent) || {}; } catch (e) { LOC = {}; }
+  var stSelect = $('[data-state-select]'), stText = $('[data-state-text]'), stWrap = $('[data-state-select-wrap]');
+  var stLabel = doc$('[data-state-label]'), cityInput = $('[data-city]');
+  var citySel = $('[data-city-select]'), cityWrap = $('[data-city-select-wrap]'), cityLabel = doc$('[data-city-label]');
+  var lastCityKey = null;
+  var lastCountry = null;
+  function syncStates(keep) {
+    if (!stSelect || !stText || !countrySel) return;
+    var country = countrySel.value;
+    var list = (LOC.states || {})[country] || [];
+    var want = keep !== undefined ? keep : '';
+    if (list.length) {
+      if (country !== lastCountry) {
+        while (stSelect.options.length > 1) stSelect.remove(1);
+        list.forEach(function (st) { var o = document.createElement('option'); o.value = st; o.textContent = st; stSelect.appendChild(o); });
+      }
+      stSelect.value = list.indexOf(want) !== -1 ? want : '';
+      stSelect.disabled = false; stSelect.required = true;
+      stText.disabled = true; stText.required = false; stText.hidden = true;
+      stWrap.hidden = false;
+      if (country !== lastCountry && window.Pk && Pk.rebuildPicker) Pk.rebuildPicker(stSelect);
+      else if (stSelect.__picker) stSelect.__picker.refresh();
+      if (stLabel) stLabel.htmlFor = stSelect.__picker ? stSelect.__picker.button.id : 'j-state';
+    } else {
+      stSelect.disabled = true; stSelect.required = false;
+      stWrap.hidden = true;
+      stText.hidden = false; stText.disabled = false; stText.required = true;
+      if (keep !== undefined) stText.value = keep;
+      else if (country !== lastCountry) stText.value = '';
+      if (stLabel) stLabel.htmlFor = 'j-state-text';
+    }
+    lastCountry = country;
+    syncCities();
+  }
+  // City: a themed list for the state (with "Other city"), or a text box
+  // where there is no list. The text box always holds the value sent.
+  var cityCache = {};
+  (function () {
+    if (!citySel || citySel.disabled || !countrySel) return;
+    var printed = Array.prototype.map.call(citySel.options, function (o) { return o.value; }).filter(function (v) { return v && v !== '__other'; });
+    if (printed.length) cityCache[countrySel.value + '|' + val('state')] = printed;
+  })();
+  function syncCities() {
+    if (!cityInput || !citySel) return;
+    var country = countrySel ? countrySel.value : '', state = val('state');
+    var key = country + '|' + state;
+    var hasLists = (LOC.cityCountries || []).indexOf(country) !== -1;
+    if (hasLists && state && !cityCache[key] && LOC.citiesUrl) {
+      // Cities come from the database, one state at a time.
+      citySel.options[0].textContent = 'Loading cities...';
+      citySel.disabled = true;
+      cityWrap.hidden = false;
+      if (citySel.__picker) { citySel.__picker.refresh(); citySel.__picker.button.disabled = true; }
+      cityCache[key] = 'loading';
+      fetch(LOC.citiesUrl + '?country=' + encodeURIComponent(country) + '&state=' + encodeURIComponent(state), { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { cityCache[key] = (d && d.cities) || []; })
+        .catch(function () { cityCache[key] = []; })
+        .then(function () { if (countrySel.value + '|' + val('state') === key) { lastCityKey = 'refresh'; syncCities(); } });
+      return;
+    }
+    if (cityCache[key] === 'loading') return;
+    var byState = Array.isArray(cityCache[key]) ? cityCache[key] : [];
+    var current = cityInput.value.trim();
+    var setPicker = function (rebuild) {
+      if (rebuild && window.Pk && Pk.rebuildPicker) Pk.rebuildPicker(citySel);
+      else if (citySel.__picker) citySel.__picker.refresh();
+      if (citySel.__picker) citySel.__picker.button.disabled = citySel.disabled;
+      if (cityLabel) cityLabel.htmlFor = citySel.__picker ? citySel.__picker.button.id : 'j-city-pick';
+    };
+    if (hasLists && !state) {
+      // A list is coming once the state is picked.
+      while (citySel.options.length > 1) citySel.remove(1);
+      citySel.options[0].textContent = 'Choose your state first';
+      citySel.value = '';
+      citySel.disabled = true;
+      cityWrap.hidden = false;
+      cityInput.hidden = true;
+      setPicker(key !== lastCityKey);
+      lastCityKey = key;
+      return;
+    }
+    citySel.options[0].textContent = 'Choose your city';
+    if (byState.length) {
+      if (key !== lastCityKey) {
+        while (citySel.options.length > 1) citySel.remove(1);
+        byState.forEach(function (c) { var o = document.createElement('option'); o.value = c; o.textContent = c; citySel.appendChild(o); });
+        var other = document.createElement('option');
+        other.value = '__other'; other.textContent = 'Other city'; other.dataset.sub = 'Type it in';
+        citySel.appendChild(other);
+      }
+      var known = byState.indexOf(current) !== -1;
+      citySel.value = known ? current : (current ? '__other' : '');
+      citySel.disabled = false;
+      cityWrap.hidden = false;
+      cityInput.hidden = !(citySel.value === '__other');
+      setPicker(key !== lastCityKey);
+    } else {
+      citySel.disabled = true;
+      cityWrap.hidden = true;
+      cityInput.hidden = false;
+      if (cityLabel) cityLabel.htmlFor = 'j-city';
+    }
+    cityInput.placeholder = 'Your city';
+    lastCityKey = key;
+  }
+  if (citySel) citySel.addEventListener('change', function () {
+    if (citySel.value === '__other') {
+      cityInput.hidden = false;
+      if (byStateHas(cityInput.value)) cityInput.value = '';
+      cityInput.focus();
+    } else {
+      cityInput.value = citySel.value;
+      cityInput.hidden = true;
+      cityInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    setError(cityInput, '');
+  });
+  var byStateHas = function (v) {
+    return Array.prototype.some.call(citySel.options, function (o) { return o.value === v && v !== '' && v !== '__other'; });
+  };
+  if (countrySel) countrySel.addEventListener('change', function () {
+    var had = val('state');
+    if (cityInput) cityInput.value = '';
+    syncStates(had);
+    setError(stateEl() || stText, '');
+    saveDraft();
+  });
+  if (stSelect) stSelect.addEventListener('change', function () { if (cityInput) cityInput.value = ''; syncCities(); setError(stSelect, ''); });
+  if (stText) stText.addEventListener('input', syncCities);
   if (phoneEl) phoneEl.addEventListener('focus', function () { if (phoneEl.value.trim() === '') dialFill(); });
+
+  syncStates(draftState || val('state'));
 
   /* ---------- Currency follows the creator's country ---------- */
   var autoCur = false, curTouched = form.dataset.posted === '1' || restored;

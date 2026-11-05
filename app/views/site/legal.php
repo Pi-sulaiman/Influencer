@@ -49,6 +49,8 @@ $updated = date('F j, Y', filemtime(__FILE__));
             <p>Estimates on this website, including the campaign estimator, are for guidance only and are not a quote or a guarantee of results.</p>
             <h2>Content</h2>
             <p>Text, graphics and the <?= $site ?> logo belong to <?= $site ?> unless stated otherwise. Creator content shown on the site belongs to the creator and is used with permission.</p>
+            <h2>Data sources</h2>
+            <p>The lists of states and cities on our forms contain information from the <a href="https://github.com/dr5hn/countries-states-cities-database" target="_blank" rel="noopener">Countries States Cities Database</a>, which is made available under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">Open Database License (ODbL)</a>.</p>
             <h2>Liability</h2>
             <p>The website is provided as is. To the extent allowed by law, we are not liable for indirect losses arising from use of the site.</p>
             <h2>Contact</h2>

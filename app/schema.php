@@ -192,6 +192,9 @@ function schema_migrations()
     $engine = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
     $big = $mysql ? 'BIGINT' : 'INTEGER';
     return [
+        10 => [
+            'ALTER TABLE influencers ADD COLUMN social_metrics TEXT NULL',
+        ],
         8 => [
             // More platforms (switched on or off in Admin > Settings > Platforms).
             'ALTER TABLE influencers ADD COLUMN snapchat VARCHAR(190) NULL',
@@ -210,6 +213,22 @@ function schema_migrations()
                 if (in_array(setting('instagram_url'), ['', 'https://instagram.com/peakilo'], true)) save_setting('instagram_url', 'https://www.instagram.com/peakilo.media/');
                 settings_all(true);
             },
+        ],
+        12 => [
+            // Full state and city lists (app/data/locations/*.json, ODbL data).
+            "CREATE TABLE IF NOT EXISTS locations (
+                id $id,
+                country VARCHAR(100) NOT NULL,
+                state VARCHAR(120) NOT NULL,
+                city VARCHAR(160) NOT NULL,
+                popular INT NOT NULL DEFAULT 0
+            )$engine",
+            'CREATE INDEX idx_locations_place ON locations (country, state)',
+            function () { import_locations(); },
+        ],
+        11 => [
+            // Creator state / region (required on the form, filterable in the admin).
+            'ALTER TABLE influencers ADD COLUMN state VARCHAR(120) NULL',
         ],
         9 => [
             // Google Search Console verification (Admin > Settings > SEO and analytics).

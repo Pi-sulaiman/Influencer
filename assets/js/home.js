@@ -266,19 +266,114 @@
   window.addEventListener('load', function () { fitHero(true); });
   window.addEventListener('resize', function () { fitHero(false); });
 
-  /* ---------- Wall filtering ---------- */
+  /* ---------- Wall filtering ----------
+     Picking a niche or platform shuffles one matching creator into view in
+     each column (it slides through the column to the centre), so about three
+     cards glow. Everything else keeps its colours, just a little dimmer.
+     A column with no match shows a stand-in: a sample creator is relabelled
+     (demo mode only), otherwise a niche card says we will scout for you. */
+  var NICHE_ICON = {}, PLAT_ICON = {}, PLAT_NAME = {};
+  $$('.mm-opt').forEach(function (o) { if (o.dataset.value) NICHE_ICON[o.dataset.value] = o.dataset.icon; });
+  $$('.mm-plat').forEach(function (l) {
+    var inp = l.querySelector('input'), ic = l.querySelector('i');
+    if (inp && inp.value && ic) { PLAT_ICON[inp.value] = (ic.className.match(/ph-[a-z-]+-logo|ph-[a-z-]+/g) || []).pop(); PLAT_NAME[inp.value] = l.getAttribute('title') || inp.value; }
+  });
+  var wallEsc = function (t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
+  function undoStandIns() {
+    if (!wall) return;
+    $$('[data-orig-info]', wall).forEach(function (c) {
+      var info = c.querySelector('.wc-info small'), reach = c.querySelector('.wc-reach');
+      if (info) info.innerHTML = c.getAttribute('data-orig-info');
+      if (reach && c.hasAttribute('data-orig-reach')) reach.innerHTML = c.getAttribute('data-orig-reach');
+      c.removeAttribute('data-orig-info'); c.removeAttribute('data-orig-reach');
+    });
+    $$('.wc-stand', wall).forEach(function (n) { n.remove(); });
+  }
+  function standIn(card, niche, platform) {
+    if (card.hasAttribute('data-demo')) {
+      var info = card.querySelector('.wc-info small'), reach = card.querySelector('.wc-reach');
+      if (info && niche) { card.setAttribute('data-orig-info', info.innerHTML); info.textContent = niche; }
+      if (reach && platform && PLAT_ICON[platform]) {
+        card.setAttribute('data-orig-reach', reach.innerHTML);
+        if (!card.hasAttribute('data-orig-info') && info) card.setAttribute('data-orig-info', info.innerHTML);
+        var ic = reach.querySelector('i');
+        if (ic) ic.className = 'ph-fill ' + PLAT_ICON[platform];
+      }
+      return;
+    }
+    var label = niche || PLAT_NAME[platform] || 'Creators';
+    var icon = niche ? (NICHE_ICON[niche] || 'ph-sparkle') : (PLAT_ICON[platform] || 'ph-sparkle');
+    var tag = document.createElement('span');
+    tag.className = 'wc-stand';
+    tag.innerHTML = '<i class="ph-bold ' + icon + '"></i><b>' + wallEsc(label) + '</b><small>Creators on request</small>';
+    card.appendChild(tag);
+  }
+  // Each wall column scrolls (forward, in its own direction) until its nearest
+  // matching creator sits in the middle of the visible wall, then keeps
+  // drifting slowly so the picked creators stay on screen.
+  var seekTweens = [];
+  function seekColumn(col, loop, target, focus, down) {
+    var strip = $('[data-wall-strip]', col);
+    var gap = parseFloat(getComputedStyle(strip).rowGap) || 16;
+    var dist = strip.scrollHeight / 2 + gap / 2;
+    var r = target.getBoundingClientRect();
+    var ahead = down ? focus - (r.top + r.height / 2) : (r.top + r.height / 2) - focus;
+    if (ahead < 0) ahead += dist * 0.95;
+    var move = (ahead / 0.95) / dist * loop.duration();
+    loop.pause();
+    var tw = gsap.to(loop, { totalTime: loop.totalTime() + move, duration: Math.min(2.2, 0.9 + ahead / 600), ease: 'power2.inOut',
+      onComplete: function () { loop.timeScale(0.14).play(); } });
+    seekTweens.push(tw);
+  }
   function filterWall(niche, platform) {
     if (!wall) return;
     var active = !!(niche || platform);
+    var cards = $$('.wcard', wall);
+    undoStandIns();
+    seekTweens.forEach(function (t) { t.kill(); });
+    seekTweens = [];
+    cards.forEach(function (c) { c.classList.remove('is-match'); });
     wall.classList.toggle('is-filtering', active);
-    $$('.wcard', wall).forEach(function (card) {
-      var ns = (card.dataset.niches || '').split('|');
-      var ps = card.dataset.plats || '';
-      var okN = !niche || ns.indexOf(niche) > -1;
-      var okP = !platform || ps === '*' || ps.split('|').indexOf(platform) > -1;
-      card.classList.toggle('is-match', active && okN && okP);
+    if (!active) {
+      loops.forEach(function (l) { l.play(); if (hasGsap) gsap.to(l, { timeScale: 1, duration: 0.8 }); });
+      return;
+    }
+    var matches = function (card) {
+      var ns = (card.dataset.niches || '').split('|'), ps = card.dataset.plats || '';
+      return (!niche || ns.indexOf(niche) > -1) && (!platform || ps === '*' || ps.split('|').indexOf(platform) > -1);
+    };
+    cards.forEach(function (c) { if (matches(c)) c.classList.add('is-match'); });
+    var wr = wall.getBoundingClientRect();
+    var focus = wr.top + wr.height * 0.42;
+    $$('[data-wall-col]', wall).forEach(function (col, ci) {
+      var strip = $('[data-wall-strip]', col);
+      var items = Array.prototype.slice.call(strip.children);
+      var down = col.dataset.dir === 'down';
+      var loop = wallLoops[ci];
+      var found = items.filter(matches);
+      if (!found.length) {
+        // No match in this column: give the card in the middle a stand-in.
+        var mid = null, best = Infinity;
+        items.forEach(function (c) { var rc = c.getBoundingClientRect(); var d = Math.abs(rc.top + rc.height / 2 - focus); if (d < best) { best = d; mid = c; } });
+        if (mid) {
+          var half = Math.floor(items.length / 2), i = items.indexOf(mid) % half;
+          [items[i], items[i + half]].forEach(function (c) { if (!c) return; standIn(c, niche, platform); c.classList.add('is-match'); });
+          if (hasGsap) gsap.fromTo(mid, { opacity: 0.3 }, { opacity: 1, duration: 0.8 });
+        }
+        if (loop && hasGsap) gsap.to(loop, { timeScale: 0.14, duration: 0.9 });
+        return;
+      }
+      if (!loop || !hasGsap) return;
+      // Nearest match ahead in the direction this column moves.
+      var target = null, bestAhead = Infinity;
+      found.forEach(function (c) {
+        var rc = c.getBoundingClientRect();
+        var ahead = down ? focus - (rc.top + rc.height / 2) : (rc.top + rc.height / 2) - focus;
+        if (ahead >= -40 && ahead < bestAhead) { bestAhead = ahead; target = c; }
+      });
+      if (!target) target = found[0];
+      seekColumn(col, loop, target, focus, down);
     });
-    loops.forEach(function (l) { if (hasGsap) gsap.to(l, { timeScale: active ? 0.3 : 1, duration: 0.8 }); });
   }
 
   /* =========================================================

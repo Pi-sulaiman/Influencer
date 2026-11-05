@@ -754,3 +754,18 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
   .micro-screen .hero2-kicker { display: none; }
   .tiny-screen .hero2-title { margin-top: 10px; }
 }
+
+/* Wall filter: matching creators get a red border, everyone else turns grey */
+.wall .wcard { transition: opacity .45s var(--ease), filter .45s var(--ease), box-shadow .45s var(--ease); }
+.wall.is-filtering .wcard { opacity: .32; filter: grayscale(1); }
+.wall.is-filtering .wcard.is-match { opacity: 1; filter: none; z-index: 2; box-shadow: 0 0 0 3px var(--red), 0 24px 50px -16px rgba(239, 59, 42, .6); }
+.wc-stand { position: absolute; inset: 0; z-index: 2; display: grid; align-content: end; gap: 2px; padding: 12px; border-radius: inherit; background: linear-gradient(160deg, var(--red), var(--coral)); color: #fff; }
+.wc-stand i { position: absolute; top: 12px; left: 12px; font-size: 26px; }
+.wc-stand b { font-size: 16px; font-weight: 900; letter-spacing: -.02em; line-height: 1.1; }
+.wc-stand small { font-size: 11.5px; opacity: .9; font-weight: 600; }
+@media (max-width: 640px) {
+  .wc-stand { padding: 8px; }
+  .wc-stand i { top: 8px; left: 8px; font-size: 18px; }
+  .wc-stand b { font-size: 12.5px; }
+  .wc-stand small { font-size: 9.5px; }
+}

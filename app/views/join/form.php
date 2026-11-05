@@ -82,6 +82,7 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                 <?= csrf_field() ?>
                 <?php if ($campaign): ?><input type="hidden" name="campaign_code" value="<?= e($campaign['code']) ?>"><?php endif; ?>
                 <input class="hp-field" type="text" name="company_site" tabindex="-1" autocomplete="off" aria-hidden="true">
+                <script type="application/json" data-locations><?= json_encode(location_js_config(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?></script>
 
                 <!-- STEP 1: ABOUT YOU -->
                 <fieldset class="jstep is-current" data-jstep>
@@ -125,12 +126,38 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                             </select>
                             <?= $err('country') ?>
                         </div>
-                        <div class="field">
-                            <label for="j-city">City <span class="opt">(optional)</span></label>
-                            <input class="input" id="j-city" name="city" value="<?= e($data['city']) ?>" autocomplete="address-level2" placeholder="e.g. Mumbai" data-preview="city">
+                        <?php $stateList = states_for($data['country'] ?: 'India'); $hasList = (bool) $stateList; ?>
+                        <div class="field<?= $has('state') ?>" data-state-field>
+                            <label for="<?= $hasList ? 'j-state' : 'j-state-text' ?>" data-state-label>State</label>
+                            <div data-state-select-wrap<?= $hasList ? '' : ' hidden' ?>>
+                                <select class="select" id="j-state" name="state" required data-state-select data-picker data-picker-search data-picker-placeholder="Search states" data-picker-title="State"<?= $hasList ? '' : ' disabled' ?><?= $inv('state') ?>>
+                                    <option value="" data-placeholder<?= $data['state'] === '' ? ' selected' : '' ?>>Choose your state</option>
+                                    <?php foreach ($stateList as $st): ?><option value="<?= e($st) ?>"<?= $data['state'] === $st ? ' selected' : '' ?>><?= e($st) ?></option><?php endforeach; ?>
+                                </select>
+                            </div>
+                            <input class="input" id="j-state-text" name="state" value="<?= $hasList ? '' : e($data['state']) ?>" placeholder="State or region" autocomplete="address-level1" data-state-text<?= $hasList ? ' hidden disabled' : ' required' ?><?= $inv('state') ?>>
+                            <?= $err('state') ?>
                         </div>
-                        <div class="field full">
-                            <label for="j-lang">Languages you create in <span class="opt">(optional)</span></label>
+                        <?php
+                        $cityList = location_cities($data['country'] ?: 'India', $data['state']);
+                        $cityKnown = $data['city'] !== '' && in_array($data['city'], $cityList, true);
+                        // India before a state is chosen: a disabled list that says so.
+                        $cityWait = !$cityList && in_array($data['country'] ?: 'India', location_city_countries(), true) && $data['state'] === '';
+                        ?>
+                        <div class="field<?= $has('city') ?>" data-city-field>
+                            <label for="<?= $cityList || $cityWait ? 'j-city-pick' : 'j-city' ?>" data-city-label>City</label>
+                            <div data-city-select-wrap<?= $cityList || $cityWait ? '' : ' hidden' ?>>
+                                <select class="select" id="j-city-pick" data-city-select data-picker data-picker-search data-picker-placeholder="Search cities" data-picker-title="City"<?= $cityList ? '' : ' disabled' ?>>
+                                    <option value="" data-placeholder<?= !$cityKnown && $data['city'] === '' ? ' selected' : '' ?>><?= $cityWait ? 'Choose your state first' : 'Choose your city' ?></option>
+                                    <?php foreach ($cityList as $ct): ?><option value="<?= e($ct) ?>"<?= $data['city'] === $ct ? ' selected' : '' ?>><?= e($ct) ?></option><?php endforeach; ?>
+                                    <option value="__other" data-sub="Type it in"<?= !$cityKnown && $data['city'] !== '' ? ' selected' : '' ?>>Other city</option>
+                                </select>
+                            </div>
+                            <input class="input" id="j-city" name="city" value="<?= e($data['city']) ?>" autocomplete="address-level2" placeholder="Your city" required data-city data-preview="city"<?= ($cityList && ($cityKnown || $data['city'] === '')) || $cityWait ? ' hidden' : '' ?><?= $inv('city') ?>>
+                            <?= $err('city') ?>
+                        </div>
+                        <div class="field">
+                            <label for="j-lang">Languages <span class="opt">(optional)</span></label>
                             <?php $langSel = csv_list($data['languages']); ?>
                             <select class="select" id="j-lang" name="languages[]" multiple data-picker data-picker-search data-picker-placeholder="Search languages" data-placeholder="Choose languages" data-languages>
                                 <?php foreach (language_options() as $lg): ?><option value="<?= e($lg) ?>"<?= in_array($lg, $langSel, true) ? ' selected' : '' ?>><?= e($lg) ?></option><?php endforeach; ?>
@@ -156,7 +183,7 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                         <input id="j-smart" type="url" inputmode="url" placeholder="Paste a profile link to add it fast" autocomplete="off" data-smart-link>
                         <span class="smart-plats" aria-hidden="true"><?php foreach (array_slice($platforms, 0, 4) as $p): ?><i class="ph-fill <?= e($p['icon']) ?>"></i><?php endforeach; ?></span>
                     </div>
-                    <p class="field-help" style="margin-bottom:14px">Tap each platform you post on. Write counts any way you like: <b>45000</b>, <b>45K</b> or <b>1.2M</b>.</p>
+                    <p class="field-help" style="margin-bottom:14px">Add a profile link or handle. We’ll look up available public stats for Instagram, YouTube and TikTok. You can edit the numbers or leave unavailable stats blank.</p>
                     <div class="channels<?= $has('channels') ?>" data-channels>
                         <?php foreach ($platforms as $key => $p):
                             $on = $data[$key] !== '' || in_array($key, $campaignPlatforms, true) && !$errors && !$posted; ?>
@@ -174,7 +201,7 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                                         <?= $err($key) ?>
                                     </div>
                                     <div class="field<?= $has($key . '_followers') ?>">
-                                        <label for="j-<?= e($key) ?>-f"><?= $key === 'youtube' ? 'Subscribers' : 'Followers' ?></label>
+                                        <label for="j-<?= e($key) ?>-f"><?= $key === 'youtube' ? 'Subscribers' : 'Followers' ?> <span class="opt">(optional if unavailable)</span></label>
                                         <input class="input" id="j-<?= e($key) ?>-f" name="<?= e($key) ?>_followers" value="<?= e($data[$key . '_followers']) ?>" inputmode="decimal" placeholder="e.g. 45K" data-followers data-count<?= $inv($key . '_followers') ?>>
                                         <p class="count-hint" data-count-hint></p>
                                         <?= $err($key . '_followers') ?>
@@ -183,6 +210,11 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                                         <label for="j-<?= e($key) ?>-v"><?= e($p['views']) ?> <span class="opt">(optional)</span></label>
                                         <input class="input" id="j-<?= e($key) ?>-v" name="<?= e($key) ?>_avg_views" value="<?= e($data[$key . '_avg_views']) ?>" inputmode="decimal" placeholder="e.g. 12K" data-views data-count>
                                         <p class="count-hint" data-count-hint></p>
+                                        <?= $err($key . '_avg_views') ?>
+                                    </div>
+                                    <div class="social-lookup js-only" data-lookup-url="<?= e(url('api/social-profile')) ?>">
+                                        <button type="button" class="link-btn" data-fetch-metrics>Fetch stats</button>
+                                        <p class="field-help" data-metrics-status role="status" aria-live="polite"></p>
                                     </div>
                                 </div>
                             </div>
@@ -191,7 +223,7 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                     <?= $err('channels') ?>
                     <div class="reach-bar js-only" data-reach-bar aria-live="polite">
                         <div><span>Total followers</span><b data-total-followers>0</b></div>
-                        <div><span>Avg. views per post</span><b data-total-views>0</b></div>
+                        <div><span>Combined channel averages</span><b data-total-views>0</b></div>
                         <div><span>Creator size</span><b data-tier>-</b></div>
                     </div>
 
@@ -223,6 +255,7 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                                 <div class="field">
                                     <label for="j-mi">Impressions, last 30 days</label>
                                     <input class="input" id="j-mi" name="monthly_impressions" value="<?= e($data['monthly_impressions']) ?>" inputmode="decimal" placeholder="e.g. 2.5M" data-monthly data-count>
+                                    <p class="field-help">Copy this from your account insights. Public video views do not measure impressions.</p>
                                     <p class="count-hint" data-count-hint></p>
                                 </div>
                                 <div class="field">
@@ -410,7 +443,7 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                     <div class="jp-niches" data-pv-niches><span class="tag">Your niches</span></div>
                     <div class="jp-stats">
                         <div><b data-pv-followers>0</b><span>followers</span></div>
-                        <div><b data-pv-views>-</b><span>avg. views</span></div>
+                        <div><b data-pv-views>-</b><span>combined averages</span></div>
                         <div><b data-pv-er>-</b><span>engagement</span></div>
                     </div>
                     <div class="jp-foot">

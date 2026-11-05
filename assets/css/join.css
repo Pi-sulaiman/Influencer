@@ -445,3 +445,13 @@
   .join-form.is-stepped .jnav { position: sticky; bottom: 0; z-index: 6; margin: 24px -14px -18px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line); border-radius: 0 0 16px 16px; box-shadow: 0 -14px 28px -22px rgba(16, 19, 28, .5); }
 }
 @media (max-width: 640px) { .join-campaign { overflow: clip; } }
+
+/* Fields line up at the top even when one has help text under it */
+.join-form .form-grid { align-items: start; }
+.social-lookup { grid-column: 1 / -1; }
+.social-lookup [data-fetch-metrics] { padding: 7px 0; font-weight: 700; }
+.social-lookup [data-fetch-metrics]:disabled { opacity: .55; cursor: default; }
+.social-lookup [data-metrics-status] { margin-top: 4px; line-height: 1.55; overflow-wrap: anywhere; }
+
+/* "Other city" text box sits under the city list */
+[data-city-field] [data-city-select-wrap]:not([hidden]) + .input:not([hidden]) { margin-top: 8px; }
