@@ -53,7 +53,7 @@ $matchData = [
     'mode' => $liveCounts ? 'live' : 'custom',
     'counts' => $counts ?: new stdClass(),
     'platformTotals' => $liveCounts ? platform_totals() : new stdClass(),
-    'platforms' => array_map(function ($p) { return $p['label']; }, $platformMeta),
+    'platforms' => array_map(function ($p) { return $p['label']; }, $enabled),
 ];
 ?>
 
