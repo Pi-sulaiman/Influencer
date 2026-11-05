@@ -199,25 +199,67 @@
   var heroLinks = hero ? $('.hero2-links', hero) : null;
   var heroForm = hero ? $('[data-matchmaker]', hero) : null;
   var absTop = function (el) { var y = 0; while (el) { y += el.offsetTop; el = el.offsetParent; } return y; };
+  // The part of the screen you can really see: phone browsers put bars at the
+  // top and bottom, so use the smallest of innerHeight, the visual viewport
+  // and 100svh (the height with every browser bar showing).
+  var svh = document.createElement('div');
+  svh.setAttribute('aria-hidden', 'true');
+  svh.style.cssText = 'position:fixed;left:0;top:0;width:0;height:100svh;visibility:hidden;pointer-events:none';
+  document.body.appendChild(svh);
+  var visibleHeight = function () {
+    var h = window.innerHeight;
+    if (window.visualViewport && window.visualViewport.height) h = Math.min(h, window.visualViewport.height);
+    if (svh.offsetHeight > 200) h = Math.min(h, svh.offsetHeight);
+    return h;
+  };
   var lastFitW = 0;
   function fitHero(force) {
-    if (!hero || !wall || !heroForm) return;
     var w = window.innerWidth;
     if (!force && w === lastFitW) return;
     lastFitW = w;
+    var fold = visibleHeight();
+    document.documentElement.classList.toggle('short-screen', w <= 640 && fold < 800);
+    document.documentElement.classList.toggle('tiny-screen', w <= 640 && fold < 700);
+    document.documentElement.classList.toggle('micro-screen', w <= 640 && fold < 620);
+    if (!hero || !heroForm) return;
+    if (!wall) return;
     wall.style.height = '';
+    wall.style.removeProperty('--wcard-w');
     if (heroLinks) heroLinks.style.marginTop = '';
     if (w > 960) return;
-    var fold = window.innerHeight;
-    var current = wall.offsetHeight;
     var formBottom = absTop(heroForm) + heroForm.offsetHeight;
-    var height = Math.max(130, Math.min(320, current + (fold - 18 - formBottom)));
+    var spare = fold - 26 - formBottom;
+    var current = wall.offsetHeight;
+    var height = Math.max(130, Math.min(320, current + spare));
     wall.style.height = height + 'px';
+    // Phones: cards scale with the wall so whole faces fit in the space.
+    if (w <= 640) wall.style.setProperty('--wcard-w', Math.round(Math.max(76, Math.min(120, height * 0.52))) + 'px');
+    if (wallLoops.length) buildWallLoops();
     formBottom += height - current;
     if (heroLinks && formBottom < fold) {
       var gap = fold + 24 - formBottom;
       if (gap > 14) heroLinks.style.marginTop = gap + 'px';
     }
+  }
+
+  // Rebuilt when the phone wall changes size, so the loop never jumps.
+  var wallLoops = [];
+  function buildWallLoops() {
+    if (!hasGsap || !hero) return;
+    var keep = wallLoops.map(function (t) { return [t.progress(), t.timeScale()]; });
+    wallLoops.forEach(function (t) { loops.splice(loops.indexOf(t), 1); t.kill(); });
+    wallLoops = [];
+    $$('[data-wall-col]', hero).forEach(function (col, i) {
+      var strip = $('[data-wall-strip]', col);
+      var dur = parseFloat(getComputedStyle(col).getPropertyValue('--dur')) || 50;
+      var down = col.dataset.dir === 'down';
+      var gap = parseFloat(getComputedStyle(strip).rowGap) || 16;
+      var dist = strip.scrollHeight / 2 + gap / 2;
+      var t = gsap.fromTo(strip, { y: down ? -dist : 0 }, { y: down ? 0 : -dist, duration: dur, ease: 'none', repeat: -1 });
+      if (keep[i]) t.progress(keep[i][0]).timeScale(keep[i][1]);
+      wallLoops.push(t);
+      loops.push(t);
+    });
   }
   fitHero(true);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { fitHero(true); });
@@ -263,17 +305,7 @@
     setTimeout(function () { if (tl.progress() < 1) tl.progress(1); }, 3200);
 
     // Infinite columns, each at its own speed and direction.
-    $$('[data-wall-col]', hero).forEach(function (col) {
-      var strip = $('[data-wall-strip]', col);
-      var dur = parseFloat(getComputedStyle(col).getPropertyValue('--dur')) || 50;
-      var down = col.dataset.dir === 'down';
-      var build = function () {
-        var dist = strip.scrollHeight / 2 + 8;
-        var t = gsap.fromTo(strip, { y: down ? -dist : 0 }, { y: down ? 0 : -dist, duration: dur, ease: 'none', repeat: -1 });
-        loops.push(t);
-      };
-      build();
-    });
+    buildWallLoops();
 
     // Slow the wall while the visitor hovers it.
     if (wall) {
