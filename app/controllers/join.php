@@ -113,6 +113,7 @@ function join_form()
         $data['barter_ok'] = input('barter_ok') ? '1' : '';
         if (!in_array($data['audience_age'], audience_age_options(), true)) $data['audience_age'] = '';
         if (!in_array($data['audience_gender'], audience_gender_options(), true)) $data['audience_gender'] = '';
+        if (!in_array($data['gender'], ['Female', 'Male', 'Non-binary', 'Other'], true)) $data['gender'] = '';
 
         // Honeypot: bots fill hidden fields. Pretend success.
         if (input('company_site') !== '') {
@@ -125,8 +126,10 @@ function join_form()
         elseif (!preg_match('/^[0-9+()\-\s.]{6,25}$/', $data['phone']) || strlen(preg_replace('/\D/', '', $data['phone'])) < 8) $errors['phone'] = 'Enter a valid WhatsApp number with country code.';
         if ($data['country'] === '') $errors['country'] = 'Tell us which country you are based in.';
 
+        // Only platforms switched on in Admin > Settings > Platforms are on the form.
+        $platforms = enabled_platforms();
         $hasChannel = false;
-        foreach (platform_options() as $p => $meta) {
+        foreach ($platforms as $p => $meta) {
             if ($data[$p] === '') continue;
             $hasChannel = true;
             if (!profile_link_matches($p, $data[$p])) $errors[$p] = 'That link does not look like a ' . $meta['label'] . ' profile.';
@@ -193,7 +196,7 @@ function join_form()
                 'country' => $data['country'],
                 'gender' => $data['gender'] ?: null,
                 'languages' => $data['languages'] ?: null,
-                'primary_platform' => array_key_exists($data['primary_platform'], platform_options()) ? $data['primary_platform'] : null,
+                'primary_platform' => array_key_exists($data['primary_platform'], $platforms) ? $data['primary_platform'] : null,
                 'website' => $data['website'] ?: null,
                 'engagement_rate' => $data['engagement_rate'] !== '' ? min(100, (float) str_replace(',', '.', preg_replace('/[^\d.,]/', '', $data['engagement_rate']))) : null,
                 'niches' => implode(', ', $data['niches']),
@@ -215,7 +218,14 @@ function join_form()
                 'updated_at' => now(),
             ];
             $impressions = 0;
-            foreach (array_keys(platform_options()) as $p) {
+            // Platforms that are switched off keep whatever the creator saved before.
+            foreach (array_diff_key(platform_options(), $platforms) as $p => $meta) {
+                if ($existing && !empty($existing[$p])) {
+                    $followers += (int) $existing[$p . '_followers'];
+                    $impressions += (int) ($existing[$p . '_avg_views'] ?? 0);
+                }
+            }
+            foreach (array_keys($platforms) as $p) {
                 $on = $data[$p] !== '';
                 $row[$p] = $on ? $data[$p] : null;
                 $count = $on ? parse_count($data[$p . '_followers']) : null;
@@ -229,8 +239,10 @@ function join_form()
             // Combined average impressions per post across every channel.
             $row['avg_impressions'] = $impressions ?: null;
             if (!$row['primary_platform']) {
-                foreach (array_keys(platform_options()) as $p) {
-                    if ($row[$p]) { $row['primary_platform'] = $p; break; }
+                // The biggest channel becomes the main platform.
+                $best = 0;
+                foreach (array_keys($platforms) as $p) {
+                    if ($row[$p] && (int) $row[$p . '_followers'] >= $best) { $best = (int) $row[$p . '_followers']; $row['primary_platform'] = $p; }
                 }
             }
             if ($photo) {
@@ -279,7 +291,7 @@ function join_form()
                 . ($campaign ? "Campaign: {$campaign['title']}\n" : '')
                 . "\nView profile: " . abs_url('admin/influencers/' . $influencerId));
 
-            $_SESSION['join_done'] = ['name' => $data['full_name'], 'campaign' => $campaign['title'] ?? null, 'updated' => (bool) $existing];
+            $_SESSION['join_done'] = ['id' => $influencerId, 'name' => $data['full_name'], 'campaign' => $campaign['title'] ?? null, 'updated' => (bool) $existing];
             redirect('join/thanks');
         }
     }
@@ -301,5 +313,73 @@ function join_form()
 function join_thanks()
 {
     $done = $_SESSION['join_done'] ?? null;
-    render('join/thanks', ['done' => $done], ['title' => 'Thank you', 'robots' => 'noindex', 'styles' => ['css/join.css']]);
+    // The creator card is built from the profile this visitor just sent (kept in their session only).
+    $creator = !empty($done['id']) ? one('SELECT * FROM influencers WHERE id = ?', [(int) $done['id']]) : null;
+    render('join/thanks', ['done' => $done, 'card' => $creator ? creator_card_data($creator) : null, 'creator' => $creator], [
+        'title' => 'Thank you',
+        'robots' => 'noindex',
+        'styles' => ['css/join.css'],
+        'scripts' => ['js/creator-card.js'],
+    ]);
+}
+
+/**
+ * Everything the branded creator card shows. Rates are included because the
+ * card is only ever shown to the creator who owns it; they choose whether the
+ * downloaded image shows them.
+ */
+function creator_card_data(array $r)
+{
+    $channels = [];
+    foreach (platform_options() as $p => $meta) {
+        if (empty($r[$p]) || !platform_enabled($p)) continue;
+        $handle = trim((string) $r[$p]);
+        if (preg_match('#[/.]#', ltrim($handle, '@'))) {
+            $path = trim((string) parse_url(preg_match('#^https?://#i', $handle) ? $handle : 'https://' . $handle, PHP_URL_PATH), '/');
+            $parts = array_values(array_filter(explode('/', $path)));
+            $handle = $parts ? (in_array($parts[0], ['in', 'add', 'channel', 'c', 'user'], true) && isset($parts[1]) ? $parts[1] : $parts[0]) : '';
+        }
+        $channels[] = [
+            'key' => $p,
+            'label' => $meta['label'],
+            'icon' => $meta['icon'],
+            'handle' => ltrim(rawurldecode($handle), '@'),
+            'followers' => (int) $r[$p . '_followers'],
+            'views' => (int) ($r[$p . '_avg_views'] ?? 0),
+        ];
+    }
+    usort($channels, function ($a, $b) { return $b['followers'] - $a['followers']; });
+    $primary = $channels[0] ?? null;
+    foreach ($channels as $c) {
+        if ($c['key'] === $r['primary_platform']) { $primary = $c; break; }
+    }
+    $sym = trim(currencies()[$r['currency']] ?? '');
+    $rates = [];
+    foreach (rate_card($r['rate_card'] ?? '') as $k => $v) {
+        $rates[] = [rate_card_options()[$k][0], money($v, $r['currency'])];
+    }
+    return [
+        'code' => creator_code($r['id']),
+        'name' => $r['display_name'] ?: $r['full_name'],
+        'first' => explode(' ', trim((string) $r['full_name']))[0],
+        'photo' => $r['photo'] ? upload_url($r['photo']) : '',
+        'initials' => initials($r['display_name'] ?: $r['full_name']),
+        'city' => (string) $r['city'],
+        'country' => (string) $r['country'],
+        'niches' => array_slice(csv_list($r['niches']), 0, 3),
+        'languages' => array_slice(csv_list($r['languages']), 0, 3),
+        'followers' => (int) $r['total_followers'],
+        'views' => (int) ($r['avg_impressions'] ?? 0),
+        'er' => $r['engagement_rate'] !== null && $r['engagement_rate'] !== '' ? (float) $r['engagement_rate'] : null,
+        'tier' => creator_tier($r['total_followers'])['label'],
+        'channels' => array_slice($channels, 0, 4),
+        'handle' => $primary ? $primary['handle'] : '',
+        'primaryIcon' => $primary ? $primary['icon'] : '',
+        'feeFrom' => $r['fee_min'] !== null ? money($r['fee_min'], $r['currency']) : '',
+        'feeTo' => $r['fee_max'] !== null && (float) $r['fee_max'] !== (float) $r['fee_min'] ? money($r['fee_max'], $r['currency']) : '',
+        'feeNotes' => (string) ($r['fee_notes'] ?? ''),
+        'rates' => array_slice($rates, 0, 4),
+        'symbol' => $sym,
+        'site' => preg_replace('#^https?://(www\.)?#', '', rtrim(abs_url(''), '/')),
+    ];
 }

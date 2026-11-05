@@ -15,7 +15,7 @@ $briefUrl = url('contact?type=brand&niche=' . rawurlencode($name));
         <p class="lead"><?= e($niche['blurb']) ?></p>
         <div class="niche-stats">
             <span><i class="ph-bold ph-seal-check"></i><?= $c['any'] ? (int) $c['any'] . ' vetted ' . e($lower) . ' creator' . ($c['any'] > 1 ? 's' : '') . ' in our network' : 'We source ' . e($lower) . ' creators for every brief' ?></span>
-            <?php foreach (['instagram', 'youtube', 'tiktok'] as $p): if (!empty($c[$p])): ?>
+            <?php foreach (array_slice(array_keys(enabled_platforms()), 0, 3) as $p): if (!empty($c[$p])): ?>
                 <span><i class="ph-fill <?= e($platformMeta[$p]['icon']) ?>"></i><?= (int) $c[$p] ?> on <?= e($platformMeta[$p]['label']) ?></span>
             <?php endif; endforeach; ?>
         </div>

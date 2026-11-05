@@ -590,3 +590,131 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
   .pick-btn, .input, .select, .textarea { border-radius: 10px; }
   .pick-pop.is-sheet, .mm-pop.is-sheet { border-radius: 18px 18px 0 0; }
 }
+
+/* =========================================================================
+   Brands / creators switch: heading and tabs on one line, equal halves
+   ========================================================================= */
+.audience-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; justify-items: stretch; gap: 22px 48px; text-align: left; margin-bottom: clamp(28px, 4vw, 48px); }
+.audience-head .ah-copy { display: grid; gap: 14px; }
+.audience-head .h2 { max-width: 15ch; }
+.switch { display: grid; grid-template-columns: 1fr 1fr; width: min(100%, 470px); padding: 6px; border-radius: 22px; background: var(--surface-2); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+.switch button { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 12px; text-align: left; padding: 10px 14px 10px 10px; min-height: 64px; border-radius: 16px; font-size: inherit; white-space: nowrap; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.switch button:focus-visible { outline: 2.5px solid var(--red); outline-offset: 2px; }
+.sw-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 19px; background: var(--surface); border: 1px solid var(--line); color: var(--text); transition: background-color .3s, color .3s, border-color .3s; }
+.sw-txt { display: grid; gap: 1px; line-height: 1.2; min-width: 0; }
+.sw-txt b { font-size: 16px; font-weight: 800; letter-spacing: -.01em; color: var(--text); transition: color .3s; }
+.sw-txt small { font-size: 12.5px; font-weight: 600; color: var(--muted); transition: color .3s; overflow: hidden; text-overflow: ellipsis; }
+.switch button[aria-selected="true"] .sw-txt b { color: #fff; }
+.switch button[aria-selected="true"] .sw-txt small { color: rgba(255, 255, 255, .72); }
+.switch button[aria-selected="true"] .sw-ic { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .16); color: #fff; }
+.switch-thumb { border-radius: 16px; }
+.aud-panel { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; }
+.aud-panel > .aw { width: 100%; }
+@media (max-width: 860px) {
+  .audience-head { grid-template-columns: 1fr; align-items: start; }
+  .switch { width: 100%; }
+  .aud-panel { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .switch { padding: 5px; border-radius: 18px; }
+  .switch button { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 2px; min-height: 58px; padding: 9px 6px; border-radius: 13px; }
+  .switch-thumb { top: 5px; bottom: 5px; left: 5px; width: calc(50% - 5px); border-radius: 13px; }
+  .sw-ic { display: none; }
+  .sw-txt b { font-size: 15.5px; }
+  .sw-txt small { font-size: 12px; }
+}
+/* Bigger, easier taps on the widget controls */
+.aw-seg button, .aw-chips button { min-height: 40px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+/* =========================================================================
+   Hero on phones and tablets: creator wall on top, big platform buttons
+   ========================================================================= */
+.mm-plat span { cursor: pointer; }
+.mm-plat { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+@media (max-width: 960px) {
+  .hero2-grid { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+  .wall { order: -1; height: clamp(230px, 36svh, 340px); margin-top: -4px; margin-bottom: -30px; z-index: 0;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 58%, transparent 100%), linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 58%, transparent 100%), linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%); }
+  .wall-tilt { inset: -34% -6% -20%; transform: rotateX(18deg) rotateZ(7deg); }
+  .hero2-copy { z-index: 2; }
+}
+@media (max-width: 640px) {
+  .wall { height: 240px; }
+  .wall-tilt { gap: 10px; }
+  .wall-strip { gap: 10px; }
+  .wcard { border-radius: 14px; }
+  .wc-info { padding: 9px 10px; }
+  .wc-info b { font-size: 13.5px; }
+  .wc-info small { font-size: 11px; }
+  .wc-reach { top: 7px; left: 7px; padding: 3px 8px; font-size: 11px; }
+  .wcard-niche { padding: 12px; }
+  .wcard-niche > i { top: 12px; left: 12px; font-size: 24px; }
+  .wcard-niche b { font-size: 15px; }
+  .hero2-title { margin-top: 16px; }
+  /* "creators on": full-width buttons with icon and name, easy to tap */
+  .mm-sentence { gap: 10px; }
+  .mm-plats { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); width: 100%; gap: 4px; padding: 4px; border-radius: 16px; }
+  .mm-plat span { display: grid; justify-items: center; align-content: center; gap: 2px; height: auto; min-height: 50px; padding: 6px 2px; border-radius: 12px; font-size: 20px; }
+  .mm-plat em { max-width: none; font-size: 11.5px; font-weight: 700; }
+  .mm-plat input:checked + span { padding: 6px 2px; }
+}
+
+/* Phones: "both sides" fits on one screen (heading, switch, widget, button) */
+@media (max-width: 640px) {
+  #how.section { padding-block: 36px; }
+  #how .audience-head { gap: 14px; margin-bottom: 14px; }
+  #how .audience-head .eyebrow { display: none; }
+  #how .audience-head .h2 { font-size: clamp(24px, 7vw, 28px); line-height: 1.1; max-width: none; }
+  #how .aud-panel { gap: 12px; }
+  #how .aud-body .h3, #how .aud-list { display: none; }
+  #how .aud-body .btn { width: 100%; justify-content: center; }
+  #how .aw { gap: 10px; padding: 14px; }
+  #how .aw-title { font-size: 15.5px; }
+  #how .aw-row { grid-template-columns: 76px minmax(0, 1fr); gap: 8px; }
+  #how .aw-row.aw-col { grid-template-columns: 1fr; gap: 6px; }
+  #how .aw-label { font-size: 12.5px; }
+  #how .aw-seg { padding: 3px; }
+  #how .aw-seg button, #how .aw-chips button { min-height: 36px; padding: 7px 6px; font-size: 13px; }
+  #how .aw-short { padding: 8px 10px; gap: 10px; }
+  #how .aw-av { width: 32px; height: 32px; font-size: 14px; margin-left: -8px; border-width: 2px; }
+  #how .aw-av em { width: 14px; height: 14px; font-size: 8px; }
+  #how .aw-short-txt b { font-size: 14px; }
+  #how .aw-short-txt small { display: none; }
+  #how .aw-chart { height: 78px; }
+  #how .aw-kpis { gap: 6px; }
+  #how .aw-kpis div { padding: 8px 9px; }
+  #how .aw-kpis b { font-size: 18px; }
+  #how .aw-kpis span { font-size: 11px; }
+  #how .aw-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -14px; padding-inline: 14px; scroll-padding-inline: 14px; }
+  #how .aw-chips::-webkit-scrollbar { display: none; }
+  #how .aw-chips button { flex: none; padding: 7px 13px; }
+  #how .aw-label-row output { font-size: 19px; }
+  #how .range-scale { display: none; }
+  #how .aw-result { padding: 10px 14px; gap: 4px; }
+  #how .aw-result b { font-size: 26px; }
+  #how .aw-steps li { padding: 6px 2px; gap: 3px; font-size: 11px; }
+  #how .aw-steps li i { font-size: 16px; }
+}
+
+/* Phones: compact hero so the matchmaker and its button fit the first screen */
+@media (max-width: 640px) {
+  .mm { margin-top: 18px; padding: 14px; }
+  .mm-sentence { gap: 8px 10px; }
+  .mm-foot { margin-top: 12px; padding-top: 10px; gap: 10px; }
+  .mm-foot .btn { min-height: 50px; }
+  .hero2-sub { margin-top: 12px; font-size: 15.5px; }
+}
+@media (max-width: 640px) and (max-height: 760px) {
+  .hero2-kicker { display: none; }
+  .hero2-title { margin-top: 6px; font-size: clamp(1.85rem, 8.4vw, 2.2rem); }
+  .hero2-sub { font-size: 14.5px; line-height: 1.45; margin-top: 8px; }
+  .mm { margin-top: 14px; }
+  .mm-count { font-size: 13.5px; }
+}
+@media (max-width: 640px) and (max-height: 760px) {
+  #how .aw-short, #how .aw-steps { display: none; }
+  #how .audience-head .h2 { font-size: 24px; }
+  #how .aw-chart { height: 70px; }
+}
+@media (max-width: 640px) { #how .aw-peak:not(.pk-left):not(.pk-right) { transform: translate(-50%, 9px); } }

@@ -449,8 +449,15 @@
       sw.setAttribute('data-active', String(idx));
       if (focus) tabs[idx].focus();
     }
+    // A tap anywhere on either half of the switch selects that side, so
+    // nobody has to hit the exact words on a small phone screen.
+    sw.addEventListener('click', function (e) {
+      var tab = e.target.closest('[role="tab"]');
+      if (tab) { select(tabs.indexOf(tab)); return; }
+      var r = sw.getBoundingClientRect();
+      select(e.clientX < r.left + r.width / 2 ? 0 : 1);
+    });
     tabs.forEach(function (t, i) {
-      t.addEventListener('click', function () { select(i); });
       t.addEventListener('keydown', function (e) {
         if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
           e.preventDefault();
@@ -546,7 +553,12 @@
     var PLATFORMS = {
       instagram: { fee: 1,    reach: 1,    er: 1 },
       tiktok:    { fee: 0.85, reach: 1.35, er: 1.25 },
-      youtube:   { fee: 1.8,  reach: 0.9,  er: 0.8 }
+      youtube:   { fee: 1.8,  reach: 0.9,  er: 0.8 },
+      facebook:  { fee: 0.7,  reach: 0.9,  er: 0.7 },
+      snapchat:  { fee: 0.75, reach: 1.1,  er: 0.9 },
+      x:         { fee: 0.6,  reach: 0.8,  er: 0.6 },
+      linkedin:  { fee: 1.4,  reach: 0.6,  er: 0.9 },
+      threads:   { fee: 0.6,  reach: 0.7,  er: 0.8 }
     };
     var budgetIn = $('[data-est-budget]', est);
     var budgetOut = $('[data-est-budget-out]', est);

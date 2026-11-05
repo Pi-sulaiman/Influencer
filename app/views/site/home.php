@@ -11,12 +11,17 @@
  */
 $catalog = niche_catalog();
 $platformMeta = platform_options();
+$enabled = enabled_platforms();
+$topPlatforms = array_slice($enabled, 0, 3, true);
 $marquee = [
     ['ph-instagram-logo', 'Instagram'], ['ph-youtube-logo', 'YouTube'], ['ph-tiktok-logo', 'TikTok'],
     ['ph-snapchat-logo', 'Snapchat'], ['ph-facebook-logo', 'Facebook'], ['ph-x-logo', 'X'],
     ['ph-pinterest-logo', 'Pinterest'], ['ph-twitch-logo', 'Twitch'], ['ph-threads-logo', 'Threads'],
     ['ph-linkedin-logo', 'LinkedIn'], ['ph-spotify-logo', 'Podcasts'],
 ];
+// Platforms switched off in Admin > Settings > Platforms are left out (Pinterest, Twitch and Podcasts always show).
+$offLabels = array_map(function ($p) { return $p['label']; }, array_diff_key($platformMeta, $enabled));
+$marquee = array_values(array_filter($marquee, function ($m) use ($offLabels) { return !in_array($m[1], $offLabels, true); }));
 
 /* ---- Hero wall: real creators first, niche tiles fill the gaps ---- */
 $tileTones = ['t-red', 't-ink', 't-peach', 't-surface', 't-blush'];
@@ -91,7 +96,7 @@ $matchData = [
                     </div>
                     <span class="mm-word">creators on</span>
                     <div class="mm-plats" role="radiogroup" aria-label="Platform">
-                        <?php foreach (['' => ['ph-globe-simple', 'Any'], 'instagram' => ['ph-instagram-logo', 'Instagram'], 'youtube' => ['ph-youtube-logo', 'YouTube'], 'tiktok' => ['ph-tiktok-logo', 'TikTok']] as $val => $p): ?>
+                        <?php foreach (['' => ['ph-globe-simple', 'Any']] + array_map(function ($p) { return [$p['icon'], $p['label']]; }, $topPlatforms) as $val => $p): ?>
                             <label class="mm-plat" title="<?= e($p[1]) ?>"><input type="radio" name="platform" value="<?= e($val) ?>"<?= $val === '' ? ' checked' : '' ?>><span><i class="ph-fill <?= e($p[0]) ?>" aria-hidden="true"></i><em><?= e($p[1]) ?></em></span></label>
                         <?php endforeach; ?>
                     </div>
@@ -179,11 +184,14 @@ $matchData = [
 <section class="section" id="how">
     <div class="container">
         <div class="audience-head">
-            <h2 class="h2" data-split>One agency for both sides of the post.</h2>
+            <div class="ah-copy">
+                <p class="eyebrow" data-reveal><?= mark_svg('') ?> Brands and creators</p>
+                <h2 class="h2" data-split>One agency for both sides of the post.</h2>
+            </div>
             <div class="switch" role="tablist" aria-label="Choose your side" data-switch data-active="0" data-reveal style="--i:1">
                 <span class="switch-thumb" aria-hidden="true"></span>
-                <button type="button" role="tab" id="tab-brands" aria-controls="panel-brands" aria-selected="true"><i class="ph-bold ph-storefront" aria-hidden="true"></i> For brands</button>
-                <button type="button" role="tab" id="tab-creators" aria-controls="panel-creators" aria-selected="false" tabindex="-1"><i class="ph-bold ph-camera" aria-hidden="true"></i> For creators</button>
+                <button type="button" role="tab" id="tab-brands" aria-controls="panel-brands" aria-selected="true"><span class="sw-ic"><i class="ph-bold ph-storefront" aria-hidden="true"></i></span><span class="sw-txt"><b>For brands</b><small>Book creators</small></span></button>
+                <button type="button" role="tab" id="tab-creators" aria-controls="panel-creators" aria-selected="false" tabindex="-1"><span class="sw-ic"><i class="ph-bold ph-camera" aria-hidden="true"></i></span><span class="sw-txt"><b>For creators</b><small>Get paid campaigns</small></span></button>
             </div>
         </div>
 
@@ -381,7 +389,12 @@ $matchData = [
                     <div class="rep-legend"><span><i class="lg-reach"></i>Reach</span><span><i class="lg-clicks"></i>Link clicks</span></div>
                 </div>
             </article>
-            <?php $mix = [['Instagram', 46, '#EF3B2A', 'ph-instagram-logo'], ['YouTube', 24, '#10131C', 'ph-youtube-logo'], ['TikTok', 22, '#FF6B57', 'ph-tiktok-logo'], ['Other', 8, '#FFAE92', 'ph-dots-three-circle']]; ?>
+            <?php
+            $mix = [];
+            $shares = [46, 24, 22]; $tones = ['#EF3B2A', '#10131C', '#FF6B57'];
+            foreach (array_values($topPlatforms) as $k => $p) $mix[] = [$p['label'], $shares[$k], $tones[$k], $p['icon']];
+            $mix[] = ['Other', 100 - array_sum(array_slice($shares, 0, count($mix))), '#FFAE92', 'ph-dots-three-circle'];
+            ?>
             <article class="cell cell-mix" data-spotlight data-reveal>
                 <div class="mix-head"><h3>Platform mix</h3><span class="aw-pill">Example</span></div>
                 <div class="mix-donut" data-mix>
@@ -438,7 +451,7 @@ $matchData = [
                     <span class="hs-ic"><i class="ph-bold ph-rocket-launch"></i></span>
                     <h3>Launch</h3>
                     <p>Content goes live on schedule with tracked links and codes. The best posts can be boosted as ads.</p>
-                    <div class="hs-platforms"><i class="ph-fill ph-instagram-logo"></i><i class="ph-fill ph-youtube-logo"></i><i class="ph-fill ph-tiktok-logo"></i><i class="ph-fill ph-snapchat-logo"></i><i class="ph-fill ph-x-logo"></i></div>
+                    <div class="hs-platforms"><?php foreach (array_slice($enabled, 0, 5) as $p): ?><i class="ph-fill <?= e($p['icon']) ?>" title="<?= e($p['label']) ?>"></i><?php endforeach; ?></div>
                 </li>
                 <li class="hs-card hs-surface">
                     <span class="hs-ic"><i class="ph-bold ph-chart-line-up"></i></span>
@@ -553,9 +566,9 @@ $matchData = [
                 <fieldset class="est-group">
                     <legend>Main platform</legend>
                     <div class="chips">
-                        <label class="chip"><input type="radio" name="platform_est" value="instagram" checked><span><i class="ph-fill ph-instagram-logo" aria-hidden="true"></i> Instagram</span></label>
-                        <label class="chip"><input type="radio" name="platform_est" value="tiktok"><span><i class="ph-fill ph-tiktok-logo" aria-hidden="true"></i> TikTok</span></label>
-                        <label class="chip"><input type="radio" name="platform_est" value="youtube"><span><i class="ph-fill ph-youtube-logo" aria-hidden="true"></i> YouTube</span></label>
+                        <?php $first = true; foreach ($topPlatforms as $pk => $p): ?>
+                            <label class="chip"><input type="radio" name="platform_est" value="<?= e($pk) ?>"<?= $first ? ' checked' : '' ?>><span><i class="ph-fill <?= e($p['icon']) ?>" aria-hidden="true"></i> <?= e($p['label']) ?></span></label>
+                        <?php $first = false; endforeach; ?>
                     </div>
                 </fieldset>
             </div>

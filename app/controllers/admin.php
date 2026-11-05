@@ -137,8 +137,8 @@ function influencer_filters()
     $args = [];
     if ($f['q'] !== '') {
         $like = '%' . $f['q'] . '%';
-        $where[] = '(i.full_name LIKE ? OR i.display_name LIKE ? OR i.email LIKE ? OR i.instagram LIKE ? OR i.youtube LIKE ? OR i.tiktok LIKE ? OR i.city LIKE ? OR i.phone LIKE ?)';
-        array_push($args, $like, $like, $like, $like, $like, $like, $like, $like);
+        $where[] = '(i.full_name LIKE ? OR i.display_name LIKE ? OR i.email LIKE ? OR i.instagram LIKE ? OR i.youtube LIKE ? OR i.tiktok LIKE ? OR i.facebook LIKE ? OR i.x LIKE ? OR i.snapchat LIKE ? OR i.linkedin LIKE ? OR i.threads LIKE ? OR i.city LIKE ? OR i.phone LIKE ?)';
+        array_push($args, ...array_fill(0, 13, $like));
     }
     if (in_array($f['status'], ['new', 'approved', 'on_hold', 'rejected'], true)) {
         $where[] = 'i.status = ?';
@@ -795,14 +795,18 @@ function settings_fields()
             'tiktok_url' => ['TikTok URL', 'url'],
             'x_url' => ['X URL', 'url'],
         ],
+        'Platforms' => [
+            'creator_platforms' => ['Platforms shown on the website', 'platforms'],
+        ],
         'Creator community' => [
-            'broadcast_whatsapp' => ['WhatsApp channel link (shown after a creator signs up)', 'url'],
-            'broadcast_instagram' => ['Instagram broadcast channel link', 'url'],
-            'broadcast_telegram' => ['Telegram channel link', 'url'],
+            'broadcast_whatsapp' => ['WhatsApp community link (shown after a creator signs up)', 'url'],
+            'broadcast_instagram' => ['Instagram broadcast channel link (optional)', 'url'],
+            'broadcast_telegram' => ['Telegram channel link (optional)', 'url'],
         ],
         'SEO and analytics' => [
             'ga_id' => ['Google Analytics 4 measurement ID (G-XXXXXXX)', 'text'],
             'google_site_verification' => ['Google Search Console verification code', 'text'],
+            'ai_crawlers' => ['Let AI search engines (ChatGPT, Claude, Perplexity, Gemini) read and cite the website', 'checkbox'],
         ],
     ];
 }
@@ -821,6 +825,7 @@ function admin_settings()
                     if ($def[1] === 'currency' && !array_key_exists($v, currencies())) $v = 'INR';
                     if ($def[1] === 'theme' && !in_array($v, ['auto', 'light', 'dark'], true)) $v = 'auto';
                     if ($def[1] === 'checkbox') $v = $v ? '1' : '0';
+                    if ($def[1] === 'platforms') $v = implode(',', array_intersect(array_keys(platform_options()), input_array($key))) ?: 'instagram';
                     if ($key === 'fx_rates') $v = mb_substr((string) ($_POST['fx_rates'] ?? ''), 0, 4000);
                     save_setting($key, $v);
                 }

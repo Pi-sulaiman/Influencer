@@ -155,14 +155,26 @@ function seo_sitemap()
 function seo_robots()
 {
     header('Content-Type: text/plain; charset=utf-8');
+    $private = ['/admin', '/install', '/c/', '/join/thanks', '/*?q=', '/*?ref='];
     echo "User-agent: *\n";
     echo "Allow: /\n";
-    echo "Disallow: /admin\n";
-    echo "Disallow: /install\n";
-    echo "Disallow: /c/\n";
-    echo "Disallow: /join/thanks\n";
-    echo "Disallow: /*?q=\n\n";
+    foreach ($private as $p) echo "Disallow: $p\n";
+    echo "\n";
+    // AI search and assistant crawlers (Admin > Settings > SEO and analytics).
+    $bots = ['GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-SearchBot', 'Claude-User', 'PerplexityBot', 'Perplexity-User', 'Google-Extended', 'Applebot-Extended', 'Bingbot', 'CCBot', 'meta-externalagent'];
+    $allowAi = setting('ai_crawlers', '1') === '1';
+    foreach ($bots as $b) {
+        echo "User-agent: $b\n";
+        if ($allowAi) {
+            echo "Allow: /\n";
+            foreach ($private as $p) echo "Disallow: $p\n";
+        } else {
+            echo "Disallow: /\n";
+        }
+        echo "\n";
+    }
     echo 'Sitemap: ' . abs_url('sitemap.xml') . "\n";
+    echo '# Summary for AI assistants: ' . abs_url('llms.txt') . "\n";
 }
 
 function seo_feed()
@@ -189,4 +201,114 @@ function seo_feed()
         echo "  </item>\n";
     }
     echo "</channel>\n</rss>";
+}
+
+/* ---------------- llms.txt: a plain summary of the site for AI assistants ---------------- */
+
+function llms_clean($text)
+{
+    $text = html_entity_decode(strip_tags((string) $text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    return trim(preg_replace('/\s+/u', ' ', $text));
+}
+
+function llms_body($full)
+{
+    $site = setting('site_name', 'Peakilo');
+    $out = [];
+    $out[] = '# ' . $site;
+    $out[] = '';
+    $out[] = '> ' . llms_clean(setting('meta_description', 'Peakilo is an influencer marketing agency that matches brands with vetted creators and runs campaigns end to end, from brief to final report.'));
+    $out[] = '';
+    $out[] = $site . ' is an influencer marketing agency based in India that works with brands worldwide. It plans campaigns, shortlists vetted creators, manages briefs, approvals and creator payments, and reports on results.';
+    $out[] = '';
+    $out[] = '- Platforms: ' . platform_list_text() . ', plus UGC (creator-made content for ads).';
+    $out[] = '- Brands: send a brief at ' . abs_url('contact') . ' or shortlist creators at ' . abs_url('talent') . '. The team replies within one business day.';
+    $out[] = '- Creators: joining is free at ' . abs_url('join') . '. Creators set their own rates and never pay anything.';
+    $out[] = '- Payments: nothing is paid online. Peakilo agrees payment terms with the brand and pays creators on the agreed date.';
+    $out[] = '- Main currency: ' . setting('default_currency', 'INR') . '. Visitors abroad see prices in their own currency.';
+    if ($email = setting('contact_email')) $out[] = '- Contact: ' . $email;
+    $out[] = '';
+
+    $out[] = '## Main pages';
+    $out[] = '';
+    $pages = [
+        '' => ['Home', 'Overview, niche matchmaker, services, process and FAQ.'],
+        'services' => ['Services', 'Influencer campaigns, creator sourcing, UGC production, paid amplification and reporting.'],
+        'brands' => ['For brands', 'How Peakilo runs campaigns for brands, from brief to final report.'],
+        'creators' => ['For creators', 'How creators get paid brand campaigns through Peakilo.'],
+        'talent' => ['Find talent', 'Browse vetted creators by niche, platform and size, and request a quote.'],
+        'influencers' => ['Influencer niches', 'Every niche Peakilo works in, with creator counts.'],
+        'join' => ['Join as a creator', 'Free creator sign-up: channels, audience and rates in three steps.'],
+        'contact' => ['Start a campaign', 'Brief builder for brands: goal, niches, platforms and budget.'],
+        'about' => ['About', 'Who runs Peakilo and how the agency works.'],
+        'blog' => ['Blog', 'Guides on influencer marketing for brands and creator growth.'],
+    ];
+    foreach ($pages as $path => $p) {
+        $out[] = '- [' . $p[0] . '](' . abs_url($path) . '): ' . $p[1];
+    }
+    $out[] = '';
+
+    $out[] = '## Influencer niches';
+    $out[] = '';
+    foreach (niche_catalog() as $slug => $n) {
+        $out[] = '- [' . $n['name'] . ' influencer marketing](' . abs_url('influencers/' . $slug) . '): ' . llms_clean($n['blurb']);
+    }
+    $out[] = '';
+
+    $posts = all("SELECT title, slug, excerpt, content, meta_description, published_at FROM posts WHERE status = 'published' AND published_at <= ? ORDER BY published_at DESC" . ($full ? '' : ' LIMIT 30'), [now()]);
+    if ($posts) {
+        $out[] = '## Blog';
+        $out[] = '';
+        foreach ($posts as $p) {
+            $out[] = '- [' . llms_clean($p['title']) . '](' . abs_url('blog/' . $p['slug']) . '): ' . str_limit(llms_clean($p['meta_description'] ?: $p['excerpt'] ?: $p['content']), 200);
+        }
+        $out[] = '';
+    }
+
+    $out[] = '## Frequently asked questions';
+    $out[] = '';
+    foreach (home_faqs() as $f) {
+        $out[] = '### ' . llms_clean($f['q']);
+        $out[] = llms_clean($f['a']);
+        $out[] = '';
+    }
+
+    if ($full && $posts) {
+        $out[] = '## Blog articles (full text)';
+        $out[] = '';
+        foreach ($posts as $p) {
+            $out[] = '### ' . llms_clean($p['title']);
+            $out[] = 'URL: ' . abs_url('blog/' . $p['slug']) . ' | Published: ' . date('Y-m-d', strtotime($p['published_at']));
+            $out[] = '';
+            $html = preg_replace('#</(p|h[1-6]|li|blockquote)>#i', "\n\n", (string) $p['content']);
+            $html = preg_replace('#<li[^>]*>#i', '- ', $html);
+            $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $text = preg_replace("/[ \t]+/", ' ', $text);
+            $out[] = trim(preg_replace("/\n\s*\n+/", "\n\n", $text));
+            $out[] = '';
+        }
+    }
+
+    $out[] = '## Optional';
+    $out[] = '';
+    if (!$full) $out[] = '- [Full text for AI assistants](' . abs_url('llms-full.txt') . '): every blog article in plain text.';
+    $out[] = '- [Sitemap](' . abs_url('sitemap.xml') . ')';
+    $out[] = '- [Blog RSS feed](' . abs_url('feed.xml') . ')';
+    $out[] = '- [Privacy policy](' . abs_url('privacy') . ')';
+    $out[] = '- [Terms](' . abs_url('terms') . ')';
+    return implode("\n", $out) . "\n";
+}
+
+function seo_llms()
+{
+    header('Content-Type: text/plain; charset=utf-8');
+    header('X-Robots-Tag: noindex');
+    echo llms_body(false);
+}
+
+function seo_llms_full()
+{
+    header('Content-Type: text/plain; charset=utf-8');
+    header('X-Robots-Tag: noindex');
+    echo llms_body(true);
 }

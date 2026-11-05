@@ -3,7 +3,7 @@ $err = function ($k) use ($errors) { return isset($errors[$k]) ? '<p class="fiel
 $has = function ($k) use ($errors) { return isset($errors[$k]) ? ' has-error' : ''; };
 $inv = function ($k) use ($errors) { return isset($errors[$k]) ? ' aria-invalid="true" aria-describedby="err-' . $k . '"' : ''; };
 $catalog = niche_catalog();
-$platforms = platform_options();
+$platforms = enabled_platforms();
 $isBrand = $data['inquiry_type'] === 'brand';
 ?>
 <section class="page-hero" style="padding-bottom:20px">
