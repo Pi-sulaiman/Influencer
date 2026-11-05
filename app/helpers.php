@@ -464,7 +464,40 @@ function platform_options()
         'tiktok'    => ['label' => 'TikTok',    'icon' => 'ph-tiktok-logo',    'placeholder' => 'tiktok.com/@yourname',   'domains' => ['tiktok.com'], 'views' => 'Avg. views per video'],
         'facebook'  => ['label' => 'Facebook',  'icon' => 'ph-facebook-logo',  'placeholder' => 'facebook.com/yourpage',  'domains' => ['facebook.com', 'fb.com', 'fb.me'], 'views' => 'Avg. reach per post'],
         'x'         => ['label' => 'X',         'icon' => 'ph-x-logo',         'placeholder' => 'x.com/yourname',         'domains' => ['x.com', 'twitter.com'], 'views' => 'Avg. impressions'],
+        'snapchat'  => ['label' => 'Snapchat',  'icon' => 'ph-snapchat-logo',  'placeholder' => 'snapchat.com/add/yourname', 'domains' => ['snapchat.com'], 'views' => 'Avg. story views'],
+        'linkedin'  => ['label' => 'LinkedIn',  'icon' => 'ph-linkedin-logo',  'placeholder' => 'linkedin.com/in/yourname', 'domains' => ['linkedin.com', 'lnkd.in'], 'views' => 'Avg. impressions per post'],
+        'threads'   => ['label' => 'Threads',   'icon' => 'ph-threads-logo',   'placeholder' => 'threads.net/@yourname',  'domains' => ['threads.net', 'threads.com'], 'views' => 'Avg. views per post'],
     ];
+}
+
+/** Platforms switched on in Admin > Settings > Platforms (creator form, homepage, FAQ text). */
+function default_platforms_csv()
+{
+    return 'instagram,youtube,facebook,snapchat,x';
+}
+
+function enabled_platforms()
+{
+    $all = platform_options();
+    $keys = array_intersect(array_map('trim', explode(',', (string) setting('creator_platforms', default_platforms_csv()))), array_keys($all));
+    if (!$keys) {
+        $keys = ['instagram'];
+    }
+    return array_intersect_key($all, array_flip($keys));
+}
+
+function platform_enabled($key)
+{
+    return isset(enabled_platforms()[$key]);
+}
+
+/** "Instagram, YouTube and Facebook" from the switched-on platforms. */
+function platform_list_text($limit = 0)
+{
+    $labels = array_values(array_map(function ($p) { return $p['label']; }, enabled_platforms()));
+    if ($limit) $labels = array_slice($labels, 0, $limit);
+    if (count($labels) < 2) return implode('', $labels);
+    return implode(', ', array_slice($labels, 0, -1)) . ' and ' . end($labels);
 }
 
 /**
@@ -569,6 +602,9 @@ function social_url($platform, $value)
         case 'tiktok':    return 'https://www.tiktok.com/@' . rawurlencode($handle);
         case 'facebook':  return 'https://facebook.com/' . rawurlencode($handle);
         case 'x':         return 'https://x.com/' . rawurlencode($handle);
+        case 'snapchat':  return 'https://www.snapchat.com/add/' . rawurlencode($handle);
+        case 'linkedin':  return 'https://www.linkedin.com/in/' . rawurlencode($handle);
+        case 'threads':   return 'https://www.threads.net/@' . rawurlencode($handle);
     }
     return '';
 }

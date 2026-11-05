@@ -41,6 +41,8 @@ $routes = [
     ['GET',      '/sitemap.xml',              'seo_sitemap'],
     ['GET',      '/robots.txt',               'seo_robots'],
     ['GET',      '/feed.xml',                 'seo_feed'],
+    ['GET',      '/llms.txt',                 'seo_llms'],
+    ['GET',      '/llms-full.txt',            'seo_llms_full'],
 
     // Campaign links + influencer registration
     ['GET',      '/c/{code}',                 'campaign_link'],

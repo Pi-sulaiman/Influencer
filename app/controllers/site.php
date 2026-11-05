@@ -8,7 +8,7 @@ function home_faqs()
     return [
         ['q' => 'What does an influencer marketing agency actually do?', 'a' => 'We plan the campaign, find and vet creators who fit your audience, negotiate rates, manage briefs and approvals, make sure content goes live on time and report on the results. You get one point of contact instead of dozens of creator conversations.'],
         ['q' => 'How much budget do I need to start?', 'a' => 'Campaigns with micro creators can start from a few thousand dollars. We size the plan around your goal and tell you up front what reach and content you can expect for the budget.'],
-        ['q' => 'Which platforms do you run campaigns on?', 'a' => 'Instagram, YouTube, TikTok, Facebook, X, Snapchat and Pinterest, plus podcasts and UGC that you can run as ads on any channel.'],
+        ['q' => 'Which platforms do you run campaigns on?', 'a' => platform_list_text() . ', plus podcasts and UGC that you can run as ads on any channel.'],
         ['q' => 'How do I book a creator, and how does payment work?', 'a' => 'Shortlist creators on our Find talent page, or send us a brief and we shortlist for you. We confirm availability and send a quote within one business day. Nothing is paid online: once you approve the plan, we agree payment terms with you directly and handle every creator payment.'],
         ['q' => 'How do you choose creators?', 'a' => 'Every creator in our network is reviewed for audience quality, engagement, content standards and brand safety. For each campaign we shortlist creators whose audience matches your target customer and share profiles before anyone is booked.'],
         ['q' => 'I am a creator. Does it cost anything to join?', 'a' => 'No. Joining the Peakilo creator network is free. Create your profile with your channels and rate range and we will reach out when a paid campaign fits your content.'],
@@ -220,7 +220,7 @@ function site_contact()
     // Anonymous niche/platform pairs of approved creators, for the live match counter.
     $pool = [];
     $liveCounts = stats_mode() === 'live';
-    foreach (all("SELECT niches, instagram, youtube, tiktok, facebook, x FROM influencers WHERE status = 'approved' AND is_demo = 0") as $r) {
+    foreach (all('SELECT niches, ' . implode(', ', array_keys(platform_options())) . " FROM influencers WHERE status = 'approved' AND is_demo = 0") as $r) {
         $pl = [];
         foreach (array_keys(platform_options()) as $p) if (!empty($r[$p])) $pl[] = $p;
         $pool[] = [csv_list($r['niches']), $pl];
@@ -358,7 +358,7 @@ function niche_faqs($name)
     return [
         ['q' => "How do you find the right $l influencers for my brand?", 'a' => "We shortlist $l creators from our vetted network based on audience location, age, engagement and content quality, then share profiles with you before anyone is booked."],
         ['q' => "How much does a $l influencer campaign cost?", 'a' => "It depends on creator size, platform, deliverables and usage rights. Micro $l creators are the most affordable way to start, and we give you a clear quote after a short brief."],
-        ['q' => "Which platforms work best for $l campaigns?", 'a' => "Most $l campaigns perform well on Instagram Reels, TikTok and YouTube Shorts, with long-form YouTube for reviews and tutorials. We recommend a mix based on your goal."],
+        ['q' => "Which platforms work best for $l campaigns?", 'a' => "Most $l campaigns perform well on Instagram Reels" . (platform_enabled('tiktok') ? ', TikTok' : '') . " and YouTube Shorts, with long-form YouTube for reviews and tutorials. We recommend a mix based on your goal."],
     ];
 }
 

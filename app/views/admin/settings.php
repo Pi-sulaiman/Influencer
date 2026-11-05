@@ -37,12 +37,14 @@
             <section class="card card-pad" id="<?= e(slugify($group)) ?>">
                 <h2 style="font-size:16px;margin-bottom:4px"><?= e($group) ?></h2>
                 <?php if ($group === 'Theme and currency'): ?><p class="small muted" style="margin-bottom:14px">Prices on the website (estimator, brief budgets, creator fees) start in your main currency. Visitors can always switch currency themselves.</p>
-                <?php elseif ($group === 'SEO and analytics'): ?><p class="small muted" style="margin-bottom:14px">Paste only the ID or code, not the full script. Then submit <b><?= e(abs_url('sitemap.xml')) ?></b> in Google Search Console.</p>
+                <?php elseif ($group === 'Platforms'): ?><p class="small muted" style="margin-bottom:14px">Only these platforms appear on the creator form, the homepage filters and the FAQ text. Switch one off (for example TikTok) and it disappears everywhere on the public site. Data creators already saved is kept.</p>
+                <?php elseif ($group === 'Creator community'): ?><p class="small muted" style="margin-bottom:14px">Shown on the thank-you page after a creator signs up, with your Instagram link from Social links.</p>
+                <?php elseif ($group === 'SEO and analytics'): ?><p class="small muted" style="margin-bottom:14px">Paste the code as Google shows it (the code, <code>google-site-verification=...</code> or the whole meta tag all work). Then submit <b><?= e(abs_url('sitemap.xml')) ?></b> in Google Search Console. Live SEO files: <a href="<?= e(abs_url('sitemap.xml')) ?>" target="_blank">sitemap.xml</a>, <a href="<?= e(abs_url('robots.txt')) ?>" target="_blank">robots.txt</a>, <a href="<?= e(abs_url('llms.txt')) ?>" target="_blank">llms.txt</a>, <a href="<?= e(abs_url('llms-full.txt')) ?>" target="_blank">llms-full.txt</a>, <a href="<?= e(abs_url('feed.xml')) ?>" target="_blank">feed.xml</a>.</p>
                 <?php else: ?><div style="height:12px"></div><?php endif; ?>
                 <div class="form-grid">
                     <?php foreach ($items as $key => $def): $val = setting($key); $id = 's-' . $key; ?>
-                        <div class="field<?= in_array($def[1], ['textarea', 'checkbox'], true) ? ' full' : '' ?>">
-                            <?php if ($def[1] !== 'checkbox'): ?><label for="<?= e($id) ?>"><?= e($def[0]) ?></label><?php endif; ?>
+                        <div class="field<?= in_array($def[1], ['textarea', 'checkbox', 'platforms'], true) ? ' full' : '' ?>">
+                            <?php if (!in_array($def[1], ['checkbox', 'platforms'], true)): ?><label for="<?= e($id) ?>"><?= e($def[0]) ?></label><?php endif; ?>
                             <?php if ($def[1] === 'textarea' && $key === 'fx_rates'): ?>
                                 <textarea class="textarea" id="<?= e($id) ?>" name="<?= e($key) ?>" rows="6" style="font-family:ui-monospace,monospace;font-size:13px"><?= e($val ?: default_fx_text()) ?></textarea>
                                 <span class="hint">Used to convert budgets and estimates for visitors. Update them every few months.</span>
@@ -54,6 +56,13 @@
                                 <select class="select" id="<?= e($id) ?>" name="<?= e($key) ?>">
                                     <?php foreach (['auto' => 'Auto: follow the visitor\'s system, with a light/dark switch', 'light' => 'Light only (switch hidden)', 'dark' => 'Dark only (switch hidden)'] as $v => $l): ?><option value="<?= $v ?>"<?= ($val ?: 'auto') === $v ? ' selected' : '' ?>><?= e($l) ?></option><?php endforeach; ?>
                                 </select>
+                            <?php elseif ($def[1] === 'platforms'): $on = enabled_platforms(); ?>
+                                <span class="label"><?= e($def[0]) ?></span>
+                                <div class="plat-toggles">
+                                    <?php foreach (platform_options() as $pk => $pm): ?>
+                                        <label class="plat-toggle"><input type="checkbox" name="<?= e($key) ?>[]" value="<?= e($pk) ?>"<?= isset($on[$pk]) ? ' checked' : '' ?>><span><i class="ph-fill <?= e($pm['icon']) ?>" aria-hidden="true"></i><?= e($pm['label']) ?></span></label>
+                                    <?php endforeach; ?>
+                                </div>
                             <?php elseif ($def[1] === 'checkbox'): ?>
                                 <label class="check"><input type="hidden" name="<?= e($key) ?>" value="0"><input type="checkbox" id="<?= e($id) ?>" name="<?= e($key) ?>" value="1"<?= $val === '1' ? ' checked' : '' ?>><?= e($def[0]) ?></label>
                             <?php else: ?>

@@ -192,6 +192,33 @@ function schema_migrations()
     $engine = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
     $big = $mysql ? 'BIGINT' : 'INTEGER';
     return [
+        8 => [
+            // More platforms (switched on or off in Admin > Settings > Platforms).
+            'ALTER TABLE influencers ADD COLUMN snapchat VARCHAR(190) NULL',
+            'ALTER TABLE influencers ADD COLUMN snapchat_followers INT NULL',
+            'ALTER TABLE influencers ADD COLUMN snapchat_avg_views INT NULL',
+            'ALTER TABLE influencers ADD COLUMN linkedin VARCHAR(190) NULL',
+            'ALTER TABLE influencers ADD COLUMN linkedin_followers INT NULL',
+            'ALTER TABLE influencers ADD COLUMN linkedin_avg_views INT NULL',
+            'ALTER TABLE influencers ADD COLUMN threads VARCHAR(190) NULL',
+            'ALTER TABLE influencers ADD COLUMN threads_followers INT NULL',
+            'ALTER TABLE influencers ADD COLUMN threads_avg_views INT NULL',
+            function () {
+                // TikTok is off by default; the community links shown after sign-up.
+                if (setting('creator_platforms') === '') save_setting('creator_platforms', default_platforms_csv());
+                if (setting('broadcast_whatsapp') === '') save_setting('broadcast_whatsapp', 'https://chat.whatsapp.com/LQUCL8OGOXuKkrjLyqOMXm');
+                if (in_array(setting('instagram_url'), ['', 'https://instagram.com/peakilo'], true)) save_setting('instagram_url', 'https://www.instagram.com/peakilo.media/');
+                settings_all(true);
+            },
+        ],
+        9 => [
+            // Google Search Console verification (Admin > Settings > SEO and analytics).
+            function () {
+                if (setting('google_site_verification') === '') save_setting('google_site_verification', 'yLGgYDCfiGkD25fR8sGC6d_HT1Nn5J0XqzYTMLELlKA');
+                if (setting('ai_crawlers') === '') save_setting('ai_crawlers', '1');
+                settings_all(true);
+            },
+        ],
         7 => [
             // Optional uploads on the creator form.
             'ALTER TABLE influencers ADD COLUMN rate_card_image VARCHAR(255) NULL',
@@ -346,14 +373,14 @@ function default_settings()
         'contact_phone'      => '',
         'whatsapp'           => '',
         'address'            => '',
-        'instagram_url'      => 'https://instagram.com/peakilo',
+        'instagram_url'      => 'https://www.instagram.com/peakilo.media/',
         'linkedin_url'       => '',
         'youtube_url'        => '',
         'tiktok_url'         => '',
         'x_url'              => '',
         'default_currency'   => 'INR',
         'ga_id'              => '',
-        'google_site_verification' => '',
+        'google_site_verification' => 'yLGgYDCfiGkD25fR8sGC6d_HT1Nn5J0XqzYTMLELlKA',
         // Homepage numbers: 'custom' shows these figures, 'live' counts from the database (Admin > Site content).
         'stats_mode'         => 'live',
         'stat_creators'      => '',
@@ -366,6 +393,8 @@ function default_settings()
         'currency_auto'      => '1',
         'fx_rates'           => default_fx_text(),
         'ai_crawlers'        => '1',
+        'creator_platforms'  => default_platforms_csv(),
+        'broadcast_whatsapp' => 'https://chat.whatsapp.com/LQUCL8OGOXuKkrjLyqOMXm',
     ];
 }
 
@@ -423,7 +452,7 @@ function seed_content($adminName)
             'description' => 'Join the Peakilo creator network. Tell us about your channels, your audience and your rates, and we will match you with paid brand campaigns that fit your content.',
             'deliverables' => "Complete your creator profile\nShare your current rate range\nAdd a clear profile photo",
             'niches' => '',
-            'platforms' => 'instagram,youtube,tiktok',
+            'platforms' => 'instagram,youtube',
             'currency' => setting('default_currency', 'USD'),
             'mode' => 'form',
             'status' => 'active',

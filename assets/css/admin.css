@@ -507,3 +507,12 @@ p { margin: 0; }
 .upload-thumbs a { display: grid; gap: 6px; font-size: 13px; font-weight: 700; color: var(--text-2); }
 .upload-thumbs img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); }
 .upload-thumbs a:hover img { border-color: var(--red); }
+
+/* Settings > Platforms: on/off chips */
+.plat-toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.plat-toggle { position: relative; cursor: pointer; }
+.plat-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.plat-toggle span { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line, #e5e1dc); font-weight: 600; font-size: 14px; color: var(--muted, #6b6f7a); transition: background-color .2s, color .2s, border-color .2s; }
+.plat-toggle span i { font-size: 18px; }
+.plat-toggle input:checked + span { background: var(--ink, #10131C); border-color: var(--ink, #10131C); color: #fff; }
+.plat-toggle input:focus-visible + span { outline: 2px solid #EF3B2A; outline-offset: 2px; }

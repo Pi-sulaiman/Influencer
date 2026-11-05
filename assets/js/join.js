@@ -1,6 +1,6 @@
-/* Creator registration: multi-step form with live validation, smart
-   profile-link paste, live preview card, profile strength meter, rate card,
-   review step and a local draft so nothing is lost on refresh.
+/* Creator registration: three-step form with live validation, smart
+   profile-link paste, live preview card, profile strength meter, rate card
+   and a local draft so nothing is lost on refresh.
    Without JavaScript the form still works as one long page. */
 (function () {
   'use strict';
@@ -17,15 +17,19 @@
   var jnav = $('[data-jnav]');
   var count = $('[data-jcount]');
   var current = 0, reached = 0;
-  var REVIEW = steps.length - 1;
+  var LAST = steps.length - 1;
 
-  var PLATFORMS = {
-    instagram: { label: 'Instagram', icon: 'ph-instagram-logo', url: 'https://instagram.com/' },
-    youtube: { label: 'YouTube', icon: 'ph-youtube-logo', url: 'https://youtube.com/@' },
-    tiktok: { label: 'TikTok', icon: 'ph-tiktok-logo', url: 'https://www.tiktok.com/@' },
-    facebook: { label: 'Facebook', icon: 'ph-facebook-logo', url: 'https://facebook.com/' },
-    x: { label: 'X', icon: 'ph-x-logo', url: 'https://x.com/' }
+  // Platforms come from the page (Admin > Settings > Platforms decides which show).
+  var URLS = {
+    instagram: 'https://instagram.com/', youtube: 'https://youtube.com/@', tiktok: 'https://www.tiktok.com/@',
+    facebook: 'https://facebook.com/', x: 'https://x.com/', snapchat: 'https://www.snapchat.com/add/',
+    linkedin: 'https://www.linkedin.com/in/', threads: 'https://www.threads.net/@'
   };
+  var PLATFORMS = {};
+  $$('[data-channel]').forEach(function (ch) {
+    var k = ch.dataset.channel;
+    PLATFORMS[k] = { label: ch.dataset.label || k, icon: ch.dataset.icon || 'ph-globe', url: URLS[k] || 'https://' };
+  });
   var SCALE = { USD: 1, INR: 85, EUR: 0.92, GBP: 0.8, AED: 3.7, AUD: 1.5, CAD: 1.37, SGD: 1.35, PKR: 280, BDT: 120, NGN: 1500 };
 
   var parseCount = function (v) {
@@ -118,7 +122,6 @@
     form.classList.toggle('is-first', current === 0);
     form.classList.toggle('is-last', current === steps.length - 1);
     if (count) count.textContent = 'Step ' + (current + 1) + ' of ' + steps.length;
-    if (current === REVIEW) buildReview();
     if (focus) {
       var top = form.getBoundingClientRect().top + window.pageYOffset - 150;
       if (window.pageYOffset > top) window.scrollTo({ top: top, behavior: 'smooth' });
@@ -187,16 +190,12 @@
         check(parseCount(fol.value) > 0, fol, 'Add your ' + label + ' ' + (ch.dataset.channel === 'youtube' ? 'subscriber' : 'follower') + ' count.');
       });
       check(any, $('[data-channels]'), 'Add at least one social channel.');
-    }
-    if (i === 2) {
       check($$('[name="niches[]"]:checked').length > 0, $('[data-niches]'), 'Pick at least one niche.');
     }
-    if (i === 3) {
+    if (i === 2) {
       var r = feeRange();
-      check(!isNaN(r[0]), $('[data-fee-min]'), 'Enter your minimum fee, or fill in the rate card.');
-      check(!isNaN(r[1]) && (isNaN(r[0]) || r[1] >= r[0]), $('[data-fee-max]'), isNaN(r[1]) ? 'Enter your maximum fee.' : 'Maximum fee should be equal to or higher than the minimum.');
-    }
-    if (i === 4) {
+      check(!isNaN(r[0]), $('[data-fee-min]'), 'Enter your starting fee, or fill in the rate card.');
+      check(!isNaN(r[1]) && (isNaN(r[0]) || r[1] >= r[0]), $('[data-fee-max]'), isNaN(r[1]) ? 'Enter your highest fee.' : 'The highest fee should be equal to or more than the starting fee.');
       var terms = form.elements.consent_terms;
       check(terms.checked, terms.closest('.check'), 'Please agree to the terms and privacy policy.');
     }
@@ -207,6 +206,8 @@
   function validate(i) {
     var ok = checkStep(i, true);
     if (!ok) {
+      // Open any optional section that holds an error so it can be seen.
+      $$('details', steps[i]).forEach(function (d) { if (d.querySelector('.has-error')) d.open = true; });
       var firstErr = steps[i].querySelector('.has-error input:not([disabled]), .has-error select, .has-error textarea');
       if (firstErr) firstErr.focus({ preventScroll: false });
       var card = steps[i];
@@ -542,37 +543,6 @@
   form.addEventListener('input', updatePreview);
   form.addEventListener('change', updatePreview);
 
-  /* ---------- Review step ---------- */
-  function buildReview() {
-    var box = $('[data-review]');
-    if (!box) return;
-    var c = refreshChannels();
-    var ns = $$('[name="niches[]"]:checked').map(function (i) { return i.value; });
-    var types = $$('[name="content_types[]"]:checked').map(function (i) { return i.value; });
-    var chans = c.active.map(function (p) {
-      var f = parseCount(form.elements[p + '_followers'].value), v = parseCount(form.elements[p + '_avg_views'].value);
-      return '<span class="rv-chan"><i class="ph-fill ' + PLATFORMS[p].icon + '"></i>' + esc(handleOf(form.elements[p].value) || PLATFORMS[p].label) + ' <b>' + compact(f) + '</b>' + (v ? ' <small>' + compact(v) + ' avg. views</small>' : '') + '</span>';
-    }).join('');
-    var age = form.querySelector('[name=audience_age]:checked'), gen = form.querySelector('[name=audience_gender]:checked');
-    var aud = [val('audience_country'), age ? age.value : '', gen ? gen.value : ''].filter(Boolean).join(' · ');
-    var rates = $$('[data-rate]').filter(function (r) { return num(r.value) > 0; }).map(function (r) {
-      return esc(r.closest('.field').querySelector('label').textContent.trim()) + ': ' + esc(cur.options[cur.selectedIndex].dataset.symbol) + money(num(r.value));
-    });
-    var sec = function (step, title, rows) {
-      return '<div class="rv-sec"><div class="rv-head"><b>' + title + '</b><button type="button" class="link-btn" data-goto="' + step + '"><i class="ph-bold ph-pencil-simple"></i>Edit</button></div><dl>' +
-        rows.filter(function (r) { return r[1]; }).map(function (r) { return '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>'; }).join('') + '</dl></div>';
-    };
-    box.innerHTML =
-      sec(0, 'About you', [['Name', esc(val('full_name')) + (val('display_name') ? ' <small>(' + esc(val('display_name')) + ')</small>' : '')], ['Email', esc(val('email'))], ['Phone', esc(val('phone'))], ['Location', esc([val('city'), val('country')].filter(Boolean).join(', '))], ['Languages', esc(val('languages'))]]) +
-      sec(1, 'Channels', [['Profiles', chans || '<span class="rv-miss">No channels yet</span>'], ['Total', compact(c.total) + ' followers' + (c.views ? ' · ' + compact(c.views) + ' avg. impressions per post' : '')], ['Engagement', val('engagement_rate') ? esc(val('engagement_rate')) + '%' : ''], ['Last 30 days', parseCount(val('monthly_impressions')) ? compact(parseCount(val('monthly_impressions'))) + ' impressions' : '']]) +
-      sec(2, 'Audience and content', [['Niches', ns.map(esc).join(', ') || '<span class="rv-miss">None picked</span>'], ['Content', types.map(esc).join(', ')], ['Audience', esc(aud)], ['Brands', esc(val('past_brands'))]]) +
-      sec(3, 'Rates', [['Fee range', esc(feeLabel())], ['Rate card', rates.join('<br>')], ['Included', esc(val('fee_notes'))], ['Product-only', form.elements.barter_ok.checked ? 'Open to it' : '']]);
-  }
-  form.addEventListener('click', function (e) {
-    var g = e.target.closest('[data-goto]');
-    if (g) go(parseInt(g.dataset.goto, 10), true);
-  });
-
   /* ---------- Draft: saved in this browser only ---------- */
   var DRAFT = 'pk-join-draft' + (form.dataset.campaign ? '-' + form.dataset.campaign : '');
   var skip = /^(_token|company_site|photo|consent_terms|consent_feature|campaign_code)$/;
@@ -615,7 +585,7 @@
       feeTouched = feeMin.value !== '' || feeMax.value !== '';
       applySymbol();
       fromInputs();
-      reached = Math.min(REVIEW, parseInt(d._step, 10) || 0);
+      reached = Math.min(LAST, parseInt(d._step, 10) || 0);
     }
     return any;
   }
@@ -631,8 +601,50 @@
     });
   }
 
-  /* ---------- Currency follows the creator's country ---------- */
+  /* ---------- Country and WhatsApp code guessed from the timezone ---------- */
   var countrySel = $('[data-country]');
+  var phoneEl = $('[data-phone]');
+  var DIAL = {
+    IN: '91', US: '1', CA: '1', GB: '44', AE: '971', SA: '966', QA: '974', KW: '965', OM: '968', BH: '973', AU: '61', NZ: '64',
+    SG: '65', MY: '60', ID: '62', PH: '63', TH: '66', VN: '84', PK: '92', BD: '880', LK: '94', NP: '977', NG: '234', KE: '254',
+    ZA: '27', EG: '20', DE: '49', FR: '33', ES: '34', IT: '39', NL: '31', IE: '353', PT: '351', BE: '32', AT: '43', FI: '358',
+    GR: '30', SE: '46', NO: '47', DK: '45', PL: '48', CZ: '420', CH: '41', TR: '90', IL: '972', BR: '55', MX: '52', AR: '54',
+    CO: '57', JP: '81', KR: '82', CN: '86', HK: '852'
+  };
+  var TZ = {
+    'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN', 'Asia/Dubai': 'AE', 'Asia/Riyadh': 'SA', 'Asia/Qatar': 'QA', 'Asia/Kuwait': 'KW',
+    'Asia/Muscat': 'OM', 'Asia/Bahrain': 'BH', 'Asia/Karachi': 'PK', 'Asia/Dhaka': 'BD', 'Asia/Colombo': 'LK', 'Asia/Kathmandu': 'NP',
+    'Asia/Katmandu': 'NP', 'Asia/Singapore': 'SG', 'Asia/Kuala_Lumpur': 'MY', 'Asia/Jakarta': 'ID', 'Asia/Manila': 'PH',
+    'Asia/Bangkok': 'TH', 'Europe/London': 'GB', 'Africa/Lagos': 'NG', 'Africa/Nairobi': 'KE', 'Africa/Johannesburg': 'ZA'
+  };
+  var optionByCode = function (code) {
+    return countrySel ? Array.prototype.filter.call(countrySel.options, function (o) { return o.dataset.code === code; })[0] : null;
+  };
+  var dialFill = function () {
+    if (!phoneEl || !countrySel) return;
+    var o = countrySel.options[countrySel.selectedIndex];
+    var dial = o && DIAL[o.dataset.code];
+    var v = phoneEl.value.trim();
+    // Only fill an empty box, or swap a code we added ourselves.
+    if (dial && (v === '' || (phoneEl.dataset.autoDial && v === '+' + phoneEl.dataset.autoDial))) {
+      phoneEl.value = '+' + dial + ' ';
+      phoneEl.dataset.autoDial = dial;
+    }
+    if (dial) phoneEl.placeholder = '+' + dial + ' ' + (dial === '91' ? '98765 43210' : '');
+  };
+  if (countrySel && !countrySel.value && form.dataset.posted !== '1') {
+    var tz = '';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+    var guess = optionByCode(TZ[tz]);
+    if (guess) {
+      countrySel.value = guess.value;
+      if (countrySel.__picker) countrySel.__picker.refresh();
+    }
+  }
+  if (countrySel) countrySel.addEventListener('change', dialFill);
+  if (phoneEl) phoneEl.addEventListener('focus', function () { if (phoneEl.value.trim() === '') dialFill(); });
+
+  /* ---------- Currency follows the creator's country ---------- */
   var autoCur = false, curTouched = form.dataset.posted === '1' || restored;
   var setCur = function (code) {
     if (!code || cur.value === code || !Array.prototype.some.call(cur.options, function (o) { return o.value === code; })) return;
@@ -706,6 +718,6 @@
   for (var s = 0; s < steps.length; s++) {
     if (steps[s].querySelector('.field-error, .has-error')) { startAt = s; break; }
   }
-  if (doc$('[data-join-errors]')) reached = steps.length - 1;
+  if (doc$('[data-join-errors]')) reached = LAST;
   go(startAt, false);
 })();

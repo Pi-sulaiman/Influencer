@@ -52,16 +52,17 @@ function render_meta(array $meta)
         $out[] = '<meta property="og:image:height" content="630">';
         $out[] = '<meta property="og:image:alt" content="' . e(setting('site_name', 'Peakilo')) . ' influencer marketing agency">';
     }
-    $out[] = '<meta property="og:locale" content="en_US">';
+    $out[] = '<meta property="og:locale" content="en_IN">';
     if ($meta['published']) $out[] = '<meta property="article:published_time" content="' . e(date('c', strtotime($meta['published']))) . '">';
     if ($meta['modified']) $out[] = '<meta property="article:modified_time" content="' . e(date('c', strtotime($meta['modified']))) . '">';
     $out[] = '<meta name="twitter:card" content="summary_large_image">';
     $out[] = '<meta name="twitter:title" content="' . e($meta['title'] ?: $meta['full_title']) . '">';
     $out[] = '<meta name="twitter:description" content="' . e($meta['description']) . '">';
     $out[] = '<meta name="twitter:image" content="' . e($meta['image']) . '">';
-    if ($v = setting('google_site_verification')) {
+    if ($v = google_verification_code()) {
         $out[] = '<meta name="google-site-verification" content="' . e($v) . '">';
     }
+    $out[] = '<link rel="alternate" type="text/plain" title="Site summary for AI assistants" href="' . e(abs_url('llms.txt')) . '">';
 
     $graph = array_merge([schema_organization(), schema_website()], $meta['schema']);
     $out[] = '<script type="application/ld+json">' . json_encode(['@context' => 'https://schema.org', '@graph' => $graph], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>';
@@ -82,6 +83,9 @@ function schema_organization()
         'description' => setting('meta_description', 'Influencer marketing agency.'),
     ];
     if ($same) $org['sameAs'] = $same;
+    $org['slogan'] = 'Influencer campaigns that peak.';
+    $org['areaServed'] = [['@type' => 'Country', 'name' => 'India'], 'Worldwide'];
+    $org['knowsAbout'] = array_merge(['Influencer marketing', 'Creator marketing', 'UGC production'], array_map(function ($n) { return $n['name'] . ' influencer marketing'; }, array_slice(array_values(niche_catalog()), 0, 8)));
     if ($email = setting('contact_email')) {
         $org['contactPoint'] = ['@type' => 'ContactPoint', 'email' => $email, 'contactType' => 'customer support'];
         if ($phone = setting('contact_phone')) $org['contactPoint']['telephone'] = $phone;
@@ -153,4 +157,14 @@ function schema_service($name, $description)
         'provider' => ['@id' => abs_url('#organization')],
         'areaServed' => 'Worldwide',
     ];
+}
+
+/** The Search Console code, whether it was pasted as the bare code, as
+    "google-site-verification=CODE" (the DNS form) or as the whole meta tag. */
+function google_verification_code()
+{
+    $v = trim((string) setting('google_site_verification'));
+    if (preg_match('/content=["\']([^"\']+)["\']/i', $v, $m)) $v = $m[1];
+    $v = preg_replace('/^google-site-verification\s*[=:]\s*/i', '', $v);
+    return preg_match('/^[A-Za-z0-9_\-]{10,120}$/', $v) ? $v : '';
 }

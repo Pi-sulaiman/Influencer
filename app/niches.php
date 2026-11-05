@@ -59,7 +59,7 @@ function niche_counts()
 {
     $counts = [];
     $platforms = array_keys(platform_options());
-    $rows = all("SELECT niches, instagram, youtube, tiktok, facebook, x FROM influencers WHERE status = 'approved' AND is_demo = 0");
+    $rows = all('SELECT niches, ' . implode(', ', array_keys(platform_options())) . " FROM influencers WHERE status = 'approved' AND is_demo = 0");
     foreach ($rows as $r) {
         foreach (csv_list($r['niches']) as $n) {
             if (!isset($counts[$n])) {
@@ -154,8 +154,9 @@ function roster_rows(array $f = [], $limit = 300)
  */
 function roster_card(array $r)
 {
+    // Only platforms switched on in Admin > Settings > Platforms are shown publicly.
     $channels = [];
-    foreach (platform_options() as $p => $meta) {
+    foreach (enabled_platforms() as $p => $meta) {
         if (empty($r[$p])) continue;
         $channels[$p] = [
             'label' => $meta['label'],
@@ -181,7 +182,7 @@ function roster_card(array $r)
         'tier' => creator_tier($r['total_followers']),
         'channels' => $channels,
         'platforms' => array_keys($channels),
-        'primary' => $r['primary_platform'] ?: (array_keys($channels)[0] ?? null),
+        'primary' => isset($channels[$r['primary_platform']]) ? $r['primary_platform'] : (array_keys($channels)[0] ?? null),
         'audience' => array_values(array_filter([$r['audience_country'] ?? '', $r['audience_age'] ?? '', $r['audience_gender'] ?? ''])),
         'bio' => (string) $r['bio'],
         'past_brands' => (string) ($r['past_brands'] ?? ''),

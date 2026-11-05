@@ -123,6 +123,12 @@
         if (hasGsap) gsap.fromTo([label, icon], { yPercent: 60, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.4, ease: 'back.out(2)' });
         closePop(true);
         update();
+        // Phones: the wall sits above the form, bring it back into view so the
+        // visitor sees the matching creators light up.
+        if (phone.matches && wall) {
+          var wr = wall.getBoundingClientRect();
+          if (wr.top < 40) window.scrollTo({ top: Math.max(0, wr.top + window.pageYOffset - 70), behavior: 'smooth' });
+        }
       });
     });
     $$('input[name=platform]', mm).forEach(function (r) {
@@ -184,6 +190,39 @@
     // Reflect the starting count so the tween begins from it.
     shownCount.v = data.approved || 0;
   }
+
+  /* ---------- Phones: the first screen always fits ----------
+     The creator wall sits on top of the hero on phones. Its height is worked
+     out from the screen height so the whole matchmaker, including the
+     "Get matched" button, is visible without scrolling, and the next cards
+     start below the fold instead of being cut in half by it. */
+  var heroLinks = hero ? $('.hero2-links', hero) : null;
+  var heroForm = hero ? $('[data-matchmaker]', hero) : null;
+  var absTop = function (el) { var y = 0; while (el) { y += el.offsetTop; el = el.offsetParent; } return y; };
+  var lastFitW = 0;
+  function fitHero(force) {
+    if (!hero || !wall || !heroForm) return;
+    var w = window.innerWidth;
+    if (!force && w === lastFitW) return;
+    lastFitW = w;
+    wall.style.height = '';
+    if (heroLinks) heroLinks.style.marginTop = '';
+    if (w > 960) return;
+    var fold = window.innerHeight;
+    var current = wall.offsetHeight;
+    var formBottom = absTop(heroForm) + heroForm.offsetHeight;
+    var height = Math.max(130, Math.min(320, current + (fold - 18 - formBottom)));
+    wall.style.height = height + 'px';
+    formBottom += height - current;
+    if (heroLinks && formBottom < fold) {
+      var gap = fold + 24 - formBottom;
+      if (gap > 14) heroLinks.style.marginTop = gap + 'px';
+    }
+  }
+  fitHero(true);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { fitHero(true); });
+  window.addEventListener('load', function () { fitHero(true); });
+  window.addEventListener('resize', function () { fitHero(false); });
 
   /* ---------- Wall filtering ---------- */
   function filterWall(niche, platform) {

@@ -1,6 +1,6 @@
 <?php
 /** @var array $f @var array $cards @var int $total @var array $tiers */
-$platforms = platform_options();
+$platforms = enabled_platforms();
 $filtered = array_filter([$f['q'], $f['niche'], $f['platform'], $f['tier']]);
 $shown = count(array_filter($cards, function ($c) { return $c['match']; }));
 ?>

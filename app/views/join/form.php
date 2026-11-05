@@ -3,11 +3,19 @@
 $err = function ($k) use ($errors) { return isset($errors[$k]) ? '<p class="field-error" id="err-' . $k . '"><i class="ph-bold ph-warning-circle"></i>' . e($errors[$k]) . '</p>' : ''; };
 $has = function ($k) use ($errors) { return isset($errors[$k]) ? ' has-error' : ''; };
 $inv = function ($k) use ($errors) { return isset($errors[$k]) ? ' aria-invalid="true" aria-describedby="err-' . $k . '"' : ''; };
-$platforms = platform_options();
-$campaignPlatforms = $campaign ? csv_list($campaign['platforms']) : [];
+$platforms = enabled_platforms();
+$campaignPlatforms = $campaign ? array_values(array_intersect(csv_list($campaign['platforms']), array_keys($platforms))) : [];
 $currencies = currencies();
 $sym = trim($currencies[$data['currency']] ?? '$');
-$stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
+$stepNames = ['About you', 'Channels', 'Rates'];
+// Optional sections start open when they already hold something (or an error).
+$openIf = function (array $keys) use ($data, $errors) {
+    foreach ($keys as $k) {
+        if (isset($errors[$k]) || (isset($data[$k]) && $data[$k] !== '' && $data[$k] !== [])) return ' open';
+    }
+    return '';
+};
+$rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function ($k) use ($data) { return $data['rate_' . $k]; }, array_keys(rate_card_options())));
 ?>
 <section class="join">
     <div class="container join-grid">
@@ -24,7 +32,7 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                             <?php if ($campaign['budget_min'] || $campaign['budget_max']): ?><span><i class="ph-bold ph-wallet"></i><?= e(fee_range($campaign['budget_min'], $campaign['budget_max'], $campaign['currency'])) ?> per creator</span><?php endif; ?>
                             <?php if ($campaign['deadline']): ?><span><i class="ph-bold ph-calendar-blank"></i>Apply by <?= e(nice_date($campaign['deadline'])) ?></span><?php endif; ?>
                             <?php if ($campaign['location']): ?><span><i class="ph-bold ph-map-pin"></i><?= e($campaign['location']) ?></span><?php endif; ?>
-                            <?php foreach ($campaignPlatforms as $p): if (isset($platforms[$p])): ?><span><i class="ph-fill <?= e($platforms[$p]['icon']) ?>"></i><?= e($platforms[$p]['label']) ?></span><?php endif; endforeach; ?>
+                            <?php foreach ($campaignPlatforms as $p): ?><span><i class="ph-fill <?= e($platforms[$p]['icon']) ?>"></i><?= e($platforms[$p]['label']) ?></span><?php endforeach; ?>
                         </div>
                         <?php if ($campaign['deliverables']): ?>
                             <details class="jc-deliverables" open>
@@ -39,11 +47,11 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                 <header class="join-head" data-reveal>
                     <p class="eyebrow"><?= mark_svg('') ?> Creator network</p>
                     <h1 class="h1">Join the Peakilo creator network.</h1>
-                    <p class="lead">Free to join. Add your channels, audience and rates once. We bring you paid campaigns that fit.</p>
+                    <p class="lead">Free to join. Add your channels and rates once. We bring you paid campaigns that fit, and you get a Peakilo creator card to share.</p>
                     <ul class="join-perks">
-                        <li><i class="ph-bold ph-clock"></i>About 5 minutes</li>
+                        <li><i class="ph-bold ph-clock"></i>3 quick steps</li>
                         <li><i class="ph-bold ph-hand-coins"></i>You set your rates</li>
-                        <li><i class="ph-bold ph-lock-simple"></i>Private until you apply</li>
+                        <li><i class="ph-bold ph-identification-card"></i>Free creator card at the end</li>
                     </ul>
                     <?php partial('join_intro_cta'); ?>
                 </header>
@@ -83,7 +91,7 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                         <label class="dropzone" data-dropzone>
                             <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" data-photo-input<?= $inv('photo') ?>>
                             <span class="dz-preview" data-photo-preview><i class="ph-bold ph-user"></i></span>
-                            <span class="dz-text"><b><span class="dz-desk">Drop a photo here or <u>browse</u></span><span class="dz-phone">Tap to add your photo</span></b><small>A clear, recent photo of your face. JPG, PNG or WEBP up to <?= (int) cfg('upload_max_mb', 5) ?> MB.</small></span>
+                            <span class="dz-text"><b><span class="dz-desk">Drop a photo here or <u>browse</u></span><span class="dz-phone">Tap to add your photo</span></b><small>A clear, recent photo of your face. It goes on your creator card. JPG, PNG or WEBP up to <?= (int) cfg('upload_max_mb', 5) ?> MB.</small></span>
                             <span class="dz-badge" aria-hidden="true"><i class="ph-bold ph-camera-plus"></i></span>
                         </label>
                         <?= $err('photo') ?>
@@ -95,23 +103,19 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                             <?= $err('full_name') ?>
                         </div>
                         <div class="field">
-                            <label for="j-display">Creator or channel name <span class="opt">(optional)</span></label>
+                            <label for="j-display">Creator name <span class="opt">(optional)</span></label>
                             <input class="input" id="j-display" name="display_name" value="<?= e($data['display_name']) ?>" placeholder="The name your audience knows" data-preview="display">
-                        </div>
-                        <div class="field<?= $has('email') ?>">
-                            <label for="j-email">Email</label>
-                            <input class="input" id="j-email" type="email" name="email" value="<?= e($data['email']) ?>" autocomplete="email" required placeholder="you@email.com"<?= $inv('email') ?>>
-                            <?= $err('email') ?>
                         </div>
                         <div class="field<?= $has('phone') ?>">
                             <label for="j-phone">WhatsApp number</label>
-                            <div class="input-group wa-group"><span class="prefix"><i class="ph-fill ph-whatsapp-logo" aria-hidden="true"></i></span><input class="input" id="j-phone" name="phone" type="tel" value="<?= e($data['phone']) ?>" autocomplete="tel" inputmode="tel" placeholder="+91 98765 43210" required<?= $inv('phone') ?>></div>
-                            <p class="field-help">Include your country code. We send campaign briefs here.</p>
+                            <div class="input-group wa-group"><span class="prefix"><i class="ph-fill ph-whatsapp-logo" aria-hidden="true"></i></span><input class="input" id="j-phone" name="phone" type="tel" value="<?= e($data['phone']) ?>" autocomplete="tel" inputmode="tel" placeholder="+91 98765 43210" required data-phone<?= $inv('phone') ?>></div>
+                            <p class="field-help">We send campaign briefs here.</p>
                             <?= $err('phone') ?>
                         </div>
-                        <div class="field">
-                            <label for="j-city">City <span class="opt">(optional)</span></label>
-                            <input class="input" id="j-city" name="city" value="<?= e($data['city']) ?>" autocomplete="address-level2" data-preview="city">
+                        <div class="field<?= $has('email') ?>">
+                            <label for="j-email">Email</label>
+                            <input class="input" id="j-email" type="email" name="email" value="<?= e($data['email']) ?>" autocomplete="email" inputmode="email" required placeholder="you@email.com"<?= $inv('email') ?>>
+                            <?= $err('email') ?>
                         </div>
                         <div class="field<?= $has('country') ?>">
                             <label for="j-country">Country</label>
@@ -122,37 +126,41 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                             <?= $err('country') ?>
                         </div>
                         <div class="field">
-                            <label for="j-gender">Gender <span class="opt">(optional)</span></label>
-                            <select class="select" id="j-gender" name="gender" data-picker>
-                                <?php foreach (['' => 'Prefer not to say', 'Female' => 'Female', 'Male' => 'Male', 'Non-binary' => 'Non-binary', 'Other' => 'Other'] as $v => $l): ?>
-                                    <option value="<?= e($v) ?>"<?= $data['gender'] === $v ? ' selected' : '' ?>><?= e($l) ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <label for="j-city">City <span class="opt">(optional)</span></label>
+                            <input class="input" id="j-city" name="city" value="<?= e($data['city']) ?>" autocomplete="address-level2" placeholder="e.g. Mumbai" data-preview="city">
                         </div>
-                        <div class="field">
+                        <div class="field full">
                             <label for="j-lang">Languages you create in <span class="opt">(optional)</span></label>
                             <?php $langSel = csv_list($data['languages']); ?>
                             <select class="select" id="j-lang" name="languages[]" multiple data-picker data-picker-search data-picker-placeholder="Search languages" data-placeholder="Choose languages" data-languages>
                                 <?php foreach (language_options() as $lg): ?><option value="<?= e($lg) ?>"<?= in_array($lg, $langSel, true) ? ' selected' : '' ?>><?= e($lg) ?></option><?php endforeach; ?>
                             </select>
                         </div>
+                        <div class="field full">
+                            <span class="label">Gender <span class="opt">(optional)</span></span>
+                            <div class="seg seg-fill" role="radiogroup" aria-label="Gender">
+                                <?php foreach (['Female' => 'Female', 'Male' => 'Male', 'Non-binary' => 'Non-binary', '' => 'Skip'] as $v => $l): ?>
+                                    <label><input type="radio" name="gender" value="<?= e($v) ?>"<?= $data['gender'] === (string) $v ? ' checked' : '' ?>><span><?= e($l) ?></span></label>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
                     </div>
                 </fieldset>
 
-                <!-- STEP 2: CHANNELS -->
+                <!-- STEP 2: CHANNELS AND CONTENT -->
                 <fieldset class="jstep" data-jstep>
-                    <legend class="jstep-title">Your channels <small>Links, followers and average views</small></legend>
+                    <legend class="jstep-title">Your channels <small>Where you post and what you post about</small></legend>
                     <div class="smart-link js-only">
                         <i class="ph-bold ph-link-simple" aria-hidden="true"></i>
                         <label class="sr-only" for="j-smart">Paste a profile link</label>
-                        <input id="j-smart" type="url" inputmode="url" placeholder="Paste any profile link and we will add it for you" autocomplete="off" data-smart-link>
-                        <span class="smart-plats" aria-hidden="true"><?php foreach ($platforms as $p): ?><i class="ph-fill <?= e($p['icon']) ?>"></i><?php endforeach; ?></span>
+                        <input id="j-smart" type="url" inputmode="url" placeholder="Paste a profile link to add it fast" autocomplete="off" data-smart-link>
+                        <span class="smart-plats" aria-hidden="true"><?php foreach (array_slice($platforms, 0, 4) as $p): ?><i class="ph-fill <?= e($p['icon']) ?>"></i><?php endforeach; ?></span>
                     </div>
-                    <p class="field-help" style="margin-bottom:16px">Turn on each platform you post on. Write counts however you like: <b>45000</b>, <b>45K</b> or <b>1.2M</b>. Average views come from your last 10 posts in your app's insights.</p>
+                    <p class="field-help" style="margin-bottom:14px">Tap each platform you post on. Write counts any way you like: <b>45000</b>, <b>45K</b> or <b>1.2M</b>.</p>
                     <div class="channels<?= $has('channels') ?>" data-channels>
                         <?php foreach ($platforms as $key => $p):
                             $on = $data[$key] !== '' || in_array($key, $campaignPlatforms, true) && !$errors && !$posted; ?>
-                            <div class="channel<?= $on ? ' is-on' : '' ?><?= isset($errors[$key]) || isset($errors[$key . '_followers']) ? ' has-error' : '' ?>" data-channel="<?= e($key) ?>" data-domains="<?= e(implode(',', $p['domains'])) ?>">
+                            <div class="channel<?= $on ? ' is-on' : '' ?><?= isset($errors[$key]) || isset($errors[$key . '_followers']) ? ' has-error' : '' ?>" data-channel="<?= e($key) ?>" data-label="<?= e($p['label']) ?>" data-icon="<?= e($p['icon']) ?>" data-domains="<?= e(implode(',', $p['domains'])) ?>">
                                 <button type="button" class="channel-toggle" aria-expanded="<?= $on ? 'true' : 'false' ?>" data-channel-toggle>
                                     <span class="ch-ic"><i class="ph-fill <?= e($p['icon']) ?>" aria-hidden="true"></i></span>
                                     <span class="ch-name"><?= e($p['label']) ?><small data-channel-summary></small></span>
@@ -172,8 +180,8 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                                         <?= $err($key . '_followers') ?>
                                     </div>
                                     <div class="field">
-                                        <label for="j-<?= e($key) ?>-v"><?= e($p['views']) ?></label>
-                                        <input class="input" id="j-<?= e($key) ?>-v" name="<?= e($key) ?>_avg_views" value="<?= e($data[$key . '_avg_views']) ?>" inputmode="decimal" placeholder="Optional, e.g. 12K" data-views data-count>
+                                        <label for="j-<?= e($key) ?>-v"><?= e($p['views']) ?> <span class="opt">(optional)</span></label>
+                                        <input class="input" id="j-<?= e($key) ?>-v" name="<?= e($key) ?>_avg_views" value="<?= e($data[$key . '_avg_views']) ?>" inputmode="decimal" placeholder="e.g. 12K" data-views data-count>
                                         <p class="count-hint" data-count-hint></p>
                                     </div>
                                 </div>
@@ -181,50 +189,14 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                         <?php endforeach; ?>
                     </div>
                     <?= $err('channels') ?>
-                    <div class="form-grid" style="margin-top:22px">
-                        <div class="field">
-                            <label for="j-primary">Main platform</label>
-                            <select class="select" id="j-primary" name="primary_platform" data-primary data-picker>
-                                <option value="">Choose your main platform</option>
-                                <?php foreach ($platforms as $key => $p): ?><option value="<?= e($key) ?>"<?= $data['primary_platform'] === $key ? ' selected' : '' ?>><?= e($p['label']) ?></option><?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label for="j-er">Average engagement rate <span class="opt">(optional)</span></label>
-                            <div class="input-group input-suffix"><input class="input" id="j-er" name="engagement_rate" value="<?= e($data['engagement_rate']) ?>" inputmode="decimal" placeholder="4.5" data-er><span class="suffix">%</span></div>
-                        </div>
-                        <div class="field">
-                            <label for="j-mi">Total impressions, last 30 days <span class="opt">(optional)</span></label>
-                            <input class="input" id="j-mi" name="monthly_impressions" value="<?= e($data['monthly_impressions']) ?>" inputmode="decimal" placeholder="e.g. 2.5M" data-monthly data-count>
-                            <p class="count-hint" data-count-hint></p>
-                        </div>
-                        <div class="field">
-                            <label for="j-web">Website or media kit link <span class="opt">(optional)</span></label>
-                            <input class="input" id="j-web" name="website" value="<?= e($data['website']) ?>" type="url" inputmode="url" placeholder="https://">
-                        </div>
-                    </div>
-                    <div class="field<?= $has('insights_image') ?>" style="margin-top:18px">
-                        <span class="label">Insights screenshot <span class="opt">(optional, gets you verified faster)</span></span>
-                        <label class="file-drop" data-file-drop>
-                            <input type="file" name="insights_image" accept="image/jpeg,image/png,image/webp" data-file-input>
-                            <span class="fd-ic"><i class="ph-bold ph-chart-bar" aria-hidden="true"></i></span>
-                            <span class="fd-txt"><b data-file-name>Upload a screenshot of your insights</b><small>Your app's audience or account insights page, showing followers and reach.</small></span>
-                            <span class="fd-btn" aria-hidden="true">Choose</span>
-                        </label>
-                        <?= $err('insights_image') ?>
-                    </div>
                     <div class="reach-bar js-only" data-reach-bar aria-live="polite">
                         <div><span>Total followers</span><b data-total-followers>0</b></div>
-                        <div><span>Avg. impressions per post</span><b data-total-views>0</b></div>
+                        <div><span>Avg. views per post</span><b data-total-views>0</b></div>
                         <div><span>Creator size</span><b data-tier>-</b></div>
                     </div>
-                </fieldset>
 
-                <!-- STEP 3: AUDIENCE AND CONTENT -->
-                <fieldset class="jstep" data-jstep>
-                    <legend class="jstep-title">Audience and content <small>Helps us match you with the right brands</small></legend>
-                    <div class="field<?= $has('niches') ?>">
-                        <span class="label">Your niches <span class="opt">(pick up to 5)</span></span>
+                    <div class="field<?= $has('niches') ?>" style="margin-top:26px">
+                        <span class="label">What do you post about? <span class="opt">(pick up to 5)</span></span>
                         <div class="chips" data-niches data-max="5">
                             <?php foreach (niche_catalog() as $n): ?>
                                 <label class="chip"><input type="checkbox" name="niches[]" value="<?= e($n['name']) ?>"<?= in_array($n['name'], $data['niches'], true) ? ' checked' : '' ?>><span><i class="ph-bold <?= e($n['icon']) ?>" aria-hidden="true"></i><?= e($n['name']) ?></span></label>
@@ -232,65 +204,93 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                         </div>
                         <?= $err('niches') ?>
                     </div>
-                    <div class="field" style="margin-top:26px">
-                        <span class="label">Content you make <span class="opt">(optional)</span></span>
-                        <div class="chips">
-                            <?php foreach (content_type_options() as $t): ?>
-                                <label class="chip"><input type="checkbox" name="content_types[]" value="<?= e($t) ?>"<?= in_array($t, $data['content_types'], true) ? ' checked' : '' ?>><span><?= e($t) ?></span></label>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
 
-                    <div class="audience-box">
-                        <p class="label"><i class="ph-bold ph-users-three" aria-hidden="true"></i> Your audience <span class="opt">(optional, from your insights)</span></p>
-                        <div class="form-grid">
-                            <div class="field full">
-                                <label for="j-acountry">Where most of your audience lives</label>
-                                <select class="select" id="j-acountry" name="audience_country" data-picker data-picker-search data-picker-placeholder="Search countries">
-                                    <option value="" data-placeholder<?= $data['audience_country'] === '' ? ' selected' : '' ?>>Choose a country</option>
-                                    <?= country_options_html($data['audience_country'], true, ['Worldwide' => ['Worldwide, no single country', 'Spread across many countries']]) ?>
-                                </select>
+                    <details class="more-box"<?= $openIf(['primary_platform', 'engagement_rate', 'monthly_impressions', 'website', 'content_types', 'insights_image']) ?>>
+                        <summary><span class="mb-ic"><i class="ph-bold ph-chart-line-up" aria-hidden="true"></i></span><span class="mb-txt"><b>Add more stats</b><small>Engagement, impressions, insights screenshot</small></span><span class="mb-tag">Optional</span><i class="ph-bold ph-plus mb-plus" aria-hidden="true"></i></summary>
+                        <div class="more-body">
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="j-primary">Main platform</label>
+                                    <select class="select" id="j-primary" name="primary_platform" data-primary data-picker>
+                                        <option value="">Your biggest one</option>
+                                        <?php foreach ($platforms as $key => $p): ?><option value="<?= e($key) ?>"<?= $data['primary_platform'] === $key ? ' selected' : '' ?>><?= e($p['label']) ?></option><?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="j-er">Average engagement rate</label>
+                                    <div class="input-group input-suffix"><input class="input" id="j-er" name="engagement_rate" value="<?= e($data['engagement_rate']) ?>" inputmode="decimal" placeholder="4.5" data-er><span class="suffix">%</span></div>
+                                </div>
+                                <div class="field">
+                                    <label for="j-mi">Impressions, last 30 days</label>
+                                    <input class="input" id="j-mi" name="monthly_impressions" value="<?= e($data['monthly_impressions']) ?>" inputmode="decimal" placeholder="e.g. 2.5M" data-monthly data-count>
+                                    <p class="count-hint" data-count-hint></p>
+                                </div>
+                                <div class="field">
+                                    <label for="j-web">Website or media kit link</label>
+                                    <input class="input" id="j-web" name="website" value="<?= e($data['website']) ?>" type="url" inputmode="url" placeholder="https://">
+                                </div>
                             </div>
-                            <div class="field">
-                                <span class="label">Main age group</span>
-                                <div class="seg" role="radiogroup" aria-label="Main audience age group">
-                                    <?php foreach (audience_age_options() as $a): ?>
-                                        <label><input type="radio" name="audience_age" value="<?= e($a) ?>"<?= $data['audience_age'] === $a ? ' checked' : '' ?>><span><?= e($a) ?></span></label>
+                            <div class="field" style="margin-top:18px">
+                                <span class="label">Content you make</span>
+                                <div class="chips">
+                                    <?php foreach (content_type_options() as $t): ?>
+                                        <label class="chip"><input type="checkbox" name="content_types[]" value="<?= e($t) ?>"<?= in_array($t, $data['content_types'], true) ? ' checked' : '' ?>><span><?= e($t) ?></span></label>
                                     <?php endforeach; ?>
                                 </div>
                             </div>
-                            <div class="field">
-                                <span class="label">Audience gender</span>
-                                <div class="seg" role="radiogroup" aria-label="Audience gender split">
-                                    <?php foreach (audience_gender_options() as $g): ?>
-                                        <label><input type="radio" name="audience_gender" value="<?= e($g) ?>"<?= $data['audience_gender'] === $g ? ' checked' : '' ?>><span><?= e($g) ?></span></label>
-                                    <?php endforeach; ?>
+                            <div class="field<?= $has('insights_image') ?>" style="margin-top:18px">
+                                <span class="label">Insights screenshot <span class="opt">(gets you verified faster)</span></span>
+                                <label class="file-drop" data-file-drop>
+                                    <input type="file" name="insights_image" accept="image/jpeg,image/png,image/webp" data-file-input>
+                                    <span class="fd-ic"><i class="ph-bold ph-chart-bar" aria-hidden="true"></i></span>
+                                    <span class="fd-txt"><b data-file-name>Upload a screenshot of your insights</b><small>Your app's account insights page, showing followers and reach.</small></span>
+                                    <span class="fd-btn" aria-hidden="true">Choose</span>
+                                </label>
+                                <?= $err('insights_image') ?>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="more-box"<?= $openIf(['audience_country', 'audience_age', 'audience_gender']) ?>>
+                        <summary><span class="mb-ic"><i class="ph-bold ph-users-three" aria-hidden="true"></i></span><span class="mb-txt"><b>Add your audience</b><small>Where they live, age and gender</small></span><span class="mb-tag">Optional</span><i class="ph-bold ph-plus mb-plus" aria-hidden="true"></i></summary>
+                        <div class="more-body">
+                            <div class="form-grid">
+                                <div class="field full">
+                                    <label for="j-acountry">Where most of your audience lives</label>
+                                    <select class="select" id="j-acountry" name="audience_country" data-picker data-picker-search data-picker-placeholder="Search countries">
+                                        <option value="" data-placeholder<?= $data['audience_country'] === '' ? ' selected' : '' ?>>Choose a country</option>
+                                        <?= country_options_html($data['audience_country'], true, ['Worldwide' => ['Worldwide, no single country', 'Spread across many countries']]) ?>
+                                    </select>
+                                </div>
+                                <div class="field full">
+                                    <span class="label">Main age group</span>
+                                    <div class="seg seg-fill" role="radiogroup" aria-label="Main audience age group">
+                                        <?php foreach (audience_age_options() as $a): ?>
+                                            <label><input type="radio" name="audience_age" value="<?= e($a) ?>"<?= $data['audience_age'] === $a ? ' checked' : '' ?>><span><?= e($a) ?></span></label>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                                <div class="field full">
+                                    <span class="label">Audience gender</span>
+                                    <div class="seg seg-fill" role="radiogroup" aria-label="Audience gender split">
+                                        <?php foreach (audience_gender_options() as $g): ?>
+                                            <label><input type="radio" name="audience_gender" value="<?= e($g) ?>"<?= $data['audience_gender'] === $g ? ' checked' : '' ?>><span><?= e($g) ?></span></label>
+                                        <?php endforeach; ?>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="form-grid" style="margin-top:22px">
-                        <div class="field full">
-                            <label for="j-brands">Brands you have worked with <span class="opt">(optional)</span></label>
-                            <input class="input" id="j-brands" name="past_brands" value="<?= e($data['past_brands']) ?>" maxlength="500" placeholder="e.g. Nykaa, boAt, Myntra">
-                        </div>
-                        <div class="field full">
-                            <label for="j-bio">Short bio <span class="opt">(optional)</span></label>
-                            <textarea class="textarea" id="j-bio" name="bio" rows="4" maxlength="600" placeholder="Who you are, what you create and who watches it" data-counter data-preview="bio"><?= e($data['bio']) ?></textarea>
-                            <p class="field-help"><span data-count-for="j-bio">0</span>/600</p>
-                        </div>
-                    </div>
+                    </details>
                 </fieldset>
 
-                <!-- STEP 4: RATES -->
+                <!-- STEP 3: RATES AND FINISH -->
                 <fieldset class="jstep" data-jstep>
-                    <legend class="jstep-title">Your rates <small>Shared only with the Peakilo team</small></legend>
+                    <legend class="jstep-title">Your rates <small>Private. Only the Peakilo team sees them.</small></legend>
                     <div class="fee-box" data-fee>
                         <div class="fee-head">
                             <div>
-                                <span class="label">Fee range per deliverable</span>
-                                <p class="field-help">What you usually charge for one sponsored post or video, from simplest to most involved.</p>
+                                <span class="label">Fee per sponsored post</span>
+                                <p class="field-help">Drag the slider or type it. Lowest for a simple post, highest for your biggest format.</p>
                             </div>
                             <div class="field fee-cur">
                                 <label class="sr-only" for="j-cur">Currency</label>
@@ -306,74 +306,86 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                         </div>
                         <div class="form-grid">
                             <div class="field<?= $has('fee_min') ?>">
-                                <label for="j-feemin">Minimum fee</label>
+                                <label for="j-feemin">From</label>
                                 <div class="input-group"><span class="prefix" data-sym><?= e($sym) ?></span><input class="input" id="j-feemin" name="fee_min" value="<?= e($data['fee_min']) ?>" inputmode="decimal" placeholder="5,000" data-fee-min<?= $inv('fee_min') ?>></div>
                                 <?= $err('fee_min') ?>
                             </div>
                             <div class="field<?= $has('fee_max') ?>">
-                                <label for="j-feemax">Maximum fee</label>
+                                <label for="j-feemax">Up to</label>
                                 <div class="input-group"><span class="prefix" data-sym><?= e($sym) ?></span><input class="input" id="j-feemax" name="fee_max" value="<?= e($data['fee_max']) ?>" inputmode="decimal" placeholder="25,000" data-fee-max<?= $inv('fee_max') ?>></div>
                                 <?= $err('fee_max') ?>
                             </div>
                         </div>
                     </div>
 
-                    <details class="rate-card"<?= array_filter(array_map(function ($k) use ($data) { return $data['rate_' . $k]; }, array_keys(rate_card_options()))) ? ' open' : '' ?>>
-                        <summary><span><i class="ph-bold ph-list-checks" aria-hidden="true"></i><b>Add a rate card</b><small>Optional. Price each format and we fill your range for you.</small></span><i class="ph-bold ph-caret-down rc-caret" aria-hidden="true"></i></summary>
-                        <div class="rc-grid">
-                            <?php foreach (rate_card_options() as $k => $r): ?>
-                                <div class="field rc-row">
-                                    <label for="j-rate-<?= e($k) ?>"><i class="ph-bold <?= e($r[1]) ?>" aria-hidden="true"></i><?= e($r[0]) ?></label>
-                                    <div class="input-group"><span class="prefix" data-sym><?= e($sym) ?></span><input class="input" id="j-rate-<?= e($k) ?>" name="rate_<?= e($k) ?>" value="<?= e($data['rate_' . $k]) ?>" inputmode="decimal" placeholder="-" data-rate></div>
-                                </div>
-                            <?php endforeach; ?>
+                    <div class="field" style="margin-top:16px">
+                        <label for="j-feenotes">What is included <span class="opt">(optional)</span></label>
+                        <input class="input" id="j-feenotes" name="fee_notes" value="<?= e($data['fee_notes']) ?>" placeholder="e.g. Reel + 3 stories, 1 revision, 30 days usage">
+                    </div>
+
+                    <details class="more-box rate-card"<?= $rateOpen ? ' open' : '' ?>>
+                        <summary><span class="mb-ic"><i class="ph-bold ph-list-checks" aria-hidden="true"></i></span><span class="mb-txt"><b>Add a rate card</b><small>Price each format, or upload the one you have</small></span><span class="mb-tag">Optional</span><i class="ph-bold ph-plus mb-plus" aria-hidden="true"></i></summary>
+                        <div class="more-body">
+                            <div class="rc-grid">
+                                <?php foreach (rate_card_options() as $k => $r): ?>
+                                    <div class="field rc-row">
+                                        <label for="j-rate-<?= e($k) ?>"><i class="ph-bold <?= e($r[1]) ?>" aria-hidden="true"></i><?= e($r[0]) ?></label>
+                                        <div class="input-group"><span class="prefix" data-sym><?= e($sym) ?></span><input class="input" id="j-rate-<?= e($k) ?>" name="rate_<?= e($k) ?>" value="<?= e($data['rate_' . $k]) ?>" inputmode="decimal" placeholder="-" data-rate></div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <div class="field<?= $has('rate_card_image') ?>" style="margin-top:14px">
+                                <label class="file-drop" data-file-drop>
+                                    <input type="file" name="rate_card_image" accept="image/jpeg,image/png,image/webp" data-file-input aria-label="Rate card image">
+                                    <span class="fd-ic"><i class="ph-bold ph-file-image" aria-hidden="true"></i></span>
+                                    <span class="fd-txt"><b data-file-name>Upload your rate card image</b><small>JPG, PNG or WEBP up to <?= (int) cfg('upload_max_mb', 5) ?> MB.</small></span>
+                                    <span class="fd-btn" aria-hidden="true">Choose</span>
+                                </label>
+                                <?= $err('rate_card_image') ?>
+                            </div>
                         </div>
                     </details>
 
-                    <div class="field<?= $has('rate_card_image') ?>" style="margin-top:16px">
-                        <span class="label">Rate card image <span class="opt">(optional)</span></span>
-                        <label class="file-drop" data-file-drop>
-                            <input type="file" name="rate_card_image" accept="image/jpeg,image/png,image/webp" data-file-input>
-                            <span class="fd-ic"><i class="ph-bold ph-file-image" aria-hidden="true"></i></span>
-                            <span class="fd-txt"><b data-file-name>Upload your rate card</b><small>Already have one? Add the image. JPG, PNG or WEBP up to <?= (int) cfg('upload_max_mb', 5) ?> MB.</small></span>
-                            <span class="fd-btn" aria-hidden="true">Choose</span>
-                        </label>
-                        <?= $err('rate_card_image') ?>
-                    </div>
-
-                    <div class="form-grid" style="margin-top:20px">
-                        <div class="field full">
-                            <label for="j-feenotes">What is included <span class="opt">(optional)</span></label>
-                            <input class="input" id="j-feenotes" name="fee_notes" value="<?= e($data['fee_notes']) ?>" placeholder="e.g. Reel + 3 stories, 1 revision, 30 days usage">
-                        </div>
-                    </div>
                     <label class="toggle-row">
                         <input type="checkbox" name="barter_ok" value="1"<?= $data['barter_ok'] ? ' checked' : '' ?>>
                         <span class="tr-switch" aria-hidden="true"></span>
                         <span><b>Open to product-only collaborations</b><small>Gifted products or experiences instead of a fee, for brands you love.</small></span>
                     </label>
+
+                    <details class="more-box"<?= $openIf(['past_brands', 'bio']) ?>>
+                        <summary><span class="mb-ic"><i class="ph-bold ph-handshake" aria-hidden="true"></i></span><span class="mb-txt"><b>Brands you worked with and bio</b><small>Helps brands say yes faster</small></span><span class="mb-tag">Optional</span><i class="ph-bold ph-plus mb-plus" aria-hidden="true"></i></summary>
+                        <div class="more-body">
+                            <div class="form-grid">
+                                <div class="field full">
+                                    <label for="j-brands">Brands you have worked with</label>
+                                    <input class="input" id="j-brands" name="past_brands" value="<?= e($data['past_brands']) ?>" maxlength="500" placeholder="e.g. Nykaa, boAt, Myntra">
+                                </div>
+                                <div class="field full">
+                                    <label for="j-bio">Short bio</label>
+                                    <textarea class="textarea" id="j-bio" name="bio" rows="3" maxlength="600" placeholder="Who you are, what you create and who watches it" data-counter data-preview="bio"><?= e($data['bio']) ?></textarea>
+                                    <p class="field-help"><span data-count-for="j-bio">0</span>/600</p>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <?php if ($campaign): ?>
+                        <div class="field" style="margin-top:18px">
+                            <label for="j-pitch">Why are you a good fit for <?= e($campaign['title']) ?>? <span class="opt">(optional)</span></label>
+                            <textarea class="textarea" id="j-pitch" name="pitch" rows="3" maxlength="1500" placeholder="Share a content idea or a past campaign that went well"><?= e($data['pitch']) ?></textarea>
+                        </div>
+                    <?php endif; ?>
+
                     <div class="pay-note">
                         <i class="ph-bold ph-shield-check" aria-hidden="true"></i>
                         <p><b>You never pay anything.</b> Peakilo agrees the budget with the brand, sends you the brief and pays you on the date we agree before you start.</p>
                     </div>
-                </fieldset>
-
-                <!-- STEP 5: REVIEW -->
-                <fieldset class="jstep" data-jstep>
-                    <legend class="jstep-title">Review and submit <small>Check everything looks right</small></legend>
-                    <div class="review js-only" data-review></div>
-                    <?php if ($campaign): ?>
-                        <div class="field" style="margin-top:18px">
-                            <label for="j-pitch">Why are you a good fit for <?= e($campaign['title']) ?>? <span class="opt">(optional)</span></label>
-                            <textarea class="textarea" id="j-pitch" name="pitch" rows="4" maxlength="1500" placeholder="Share a content idea or a past campaign that went well"><?= e($data['pitch']) ?></textarea>
-                        </div>
-                    <?php endif; ?>
                     <div class="consents">
-                        <label class="check<?= $has('consent_terms') ?>"><input type="checkbox" name="consent_terms" value="1"<?= $data['consent_terms'] ? ' checked' : '' ?> required<?= $inv('consent_terms') ?>><span>I confirm these details are accurate and I agree to the <a href="<?= e(url('terms')) ?>" target="_blank">terms</a> and <a href="<?= e(url('privacy')) ?>" target="_blank">privacy policy</a>.</span></label>
+                        <label class="check<?= $has('consent_terms') ?>"><input type="checkbox" name="consent_terms" value="1"<?= $data['consent_terms'] ? ' checked' : '' ?> required<?= $inv('consent_terms') ?>><span>My details are accurate and I agree to the <a href="<?= e(url('terms')) ?>" target="_blank">terms</a> and <a href="<?= e(url('privacy')) ?>" target="_blank">privacy policy</a>.</span></label>
                         <?= $err('consent_terms') ?>
-                        <label class="check"><input type="checkbox" name="consent_feature" value="1"<?= $data['consent_feature'] ? ' checked' : '' ?>><span>Peakilo may show my photo, creator name and audience stats to brands on its website. Your rates and contact details stay private. <span class="opt">(optional)</span></span></label>
+                        <label class="check"><input type="checkbox" name="consent_feature" value="1"<?= $data['consent_feature'] ? ' checked' : '' ?>><span>Peakilo may show my photo, creator name and audience stats to brands. My rates and contact details stay private. <span class="opt">(optional)</span></span></label>
                     </div>
-                    <button class="btn btn-primary btn-lg btn-block js-hide-until-last" type="submit" data-submit><?= $campaign ? 'Submit application' : 'Create my creator profile' ?> <i class="ph-bold ph-arrow-right"></i></button>
+                    <button class="btn btn-primary btn-lg btn-block js-hide-until-last" type="submit" data-submit><?= $campaign ? 'Submit and get my creator card' : 'Create my profile and card' ?> <i class="ph-bold ph-arrow-right"></i></button>
                 </fieldset>
 
                 <div class="jnav" data-jnav hidden>
@@ -385,7 +397,7 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
         </div>
 
         <aside class="join-preview" aria-label="Live preview of your creator card">
-            <p class="jp-label"><span class="live-dot" aria-hidden="true"></span>Live preview</p>
+            <p class="jp-label"><span class="live-dot" aria-hidden="true"></span>Live preview of your card</p>
             <div class="jp-card" data-preview-card>
                 <div class="jp-media">
                     <img data-pv-photo alt="" hidden>
@@ -393,7 +405,7 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                     <span class="jp-tier" data-pv-tier hidden></span>
                 </div>
                 <div class="jp-body">
-                    <div class="jp-name"><span data-pv-name>Your name</span> <i class="ph-fill ph-seal-check"></i></div>
+                    <div class="jp-name"><span data-pv-name>Your name</span></div>
                     <div class="jp-loc" data-pv-loc>Your city</div>
                     <div class="jp-niches" data-pv-niches><span class="tag">Your niches</span></div>
                     <div class="jp-stats">
@@ -413,8 +425,8 @@ $stepNames = ['About you', 'Channels', 'Audience', 'Rates', 'Review'];
                 <p class="st-tip" data-strength-tip>Add a photo to get started.</p>
             </div>
             <ul class="jp-tips">
+                <li><i class="ph-bold ph-identification-card"></i>After you submit, you get this card as an image to save and share.</li>
                 <li><i class="ph-bold ph-lock-simple"></i>Your rates and contact details are private. Brands only see them when you apply to a campaign.</li>
-                <li><i class="ph-bold ph-clock"></i>We review new profiles within a few working days.</li>
             </ul>
         </aside>
     </div>
