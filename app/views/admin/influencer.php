@@ -80,7 +80,19 @@ $tier = creator_tier($inf['total_followers']);
                                     <?= e($lookup['source'] ?? '') ?> · <?= (int) ($lookup['sample_size'] ?? 0) ?> videos with view counts.
                                     Checked <?= e($lookup['fetched_at'] ?? '') ?>.
                                     <?= e($lookup['sample_description'] ?? '') ?>
+                                    <?php if (isset($lookup['average_likes'])): ?>
+                                        Avg. likes: <?= e(number_format($lookup['average_likes'])) ?> (<?= (int) ($lookup['likes_sample_size'] ?? 0) ?> Reels).
+                                    <?php endif; ?>
                                 <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                        <?php if (in_array($k, ['instagram', 'youtube'], true)):
+                            $multiplier = social_impression_multiplier($k);
+                            $projection = social_admin_projection($inf[$k . '_avg_views'] ?? null, $inf[$k . '_followers'] ?? null, $multiplier); ?>
+                            <div class="small" style="margin:8px 0 16px">
+                                <b>Estimated impressions per video (planning): <?= $projection['estimated_impressions'] !== null ? number_format($projection['estimated_impressions']) : '—' ?></b><br>
+                                Views ÷ followers: <?= $projection['views_followers_percent'] !== null ? number_format($projection['views_followers_percent'], 2) . '%' : '—' ?>.<br>
+                                <span class="muted">Estimate = average views × <?= e($multiplier) ?>; percentage = average views ÷ followers × 100. Assumption-based proxy, not measured impressions or unique reach. Missing inputs stay unavailable; zero followers have no percentage.</span>
                             </div>
                         <?php endif; ?>
                     <?php endforeach; ?>

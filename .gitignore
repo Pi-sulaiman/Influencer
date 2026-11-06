@@ -31,3 +31,4 @@ __pycache__/
 *.pyc
 uploads/logos/*
 !uploads/logos/.gitkeep
+storage/social-*.png
