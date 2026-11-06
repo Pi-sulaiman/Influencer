@@ -39,6 +39,7 @@
                 <?php if ($group === 'Theme and currency'): ?><p class="small muted" style="margin-bottom:14px">Prices on the website (estimator, brief budgets, creator fees) start in your main currency. Visitors can always switch currency themselves.</p>
                 <?php elseif ($group === 'Platforms'): ?><p class="small muted" style="margin-bottom:14px">Only these platforms appear on the creator form, the homepage filters and the FAQ text. Switch one off (for example TikTok) and it disappears everywhere on the public site. Data creators already saved is kept.</p>
                 <?php elseif ($group === 'Creator community'): ?><p class="small muted" style="margin-bottom:14px">Shown on the thank-you page after a creator signs up, with your Instagram link from Social links.</p>
+                <?php elseif ($group === 'Instagram (Meta API)'): ?><p class="small muted" style="margin-bottom:14px">Lets the creator form fill in Instagram followers, average Reel views and engagement for business and creator accounts, using Meta's official Business Discovery API. Setup steps: <code>docs/instagram-meta.md</code>. <?= setting('meta_access_token') !== '' && setting('meta_ig_user_id') !== '' ? '<b style="color:#1F9D60">Connected.</b>' : '<b>Not connected yet.</b>' ?></p>
                 <?php elseif ($group === 'SEO and analytics'): ?><p class="small muted" style="margin-bottom:14px">Paste the code as Google shows it (the code, <code>google-site-verification=...</code> or the whole meta tag all work). Then submit <b><?= e(abs_url('sitemap.xml')) ?></b> in Google Search Console. Live SEO files: <a href="<?= e(abs_url('sitemap.xml')) ?>" target="_blank">sitemap.xml</a>, <a href="<?= e(abs_url('robots.txt')) ?>" target="_blank">robots.txt</a>, <a href="<?= e(abs_url('llms.txt')) ?>" target="_blank">llms.txt</a>, <a href="<?= e(abs_url('llms-full.txt')) ?>" target="_blank">llms-full.txt</a>, <a href="<?= e(abs_url('feed.xml')) ?>" target="_blank">feed.xml</a>.</p>
                 <?php else: ?><div style="height:12px"></div><?php endif; ?>
                 <div class="form-grid">
@@ -63,6 +64,9 @@
                                         <label class="plat-toggle"><input type="checkbox" name="<?= e($key) ?>[]" value="<?= e($pk) ?>"<?= isset($on[$pk]) ? ' checked' : '' ?>><span><i class="ph-fill <?= e($pm['icon']) ?>" aria-hidden="true"></i><?= e($pm['label']) ?></span></label>
                                     <?php endforeach; ?>
                                 </div>
+                            <?php elseif ($def[1] === 'secret'): ?>
+                                <input class="input" id="<?= e($id) ?>" name="<?= e($key) ?>" type="password" autocomplete="off" spellcheck="false" value="" placeholder="<?= $val !== '' ? 'Saved. Paste a new one to replace it' : 'Paste it here' ?>">
+                                <?php if ($val !== ''): ?><label class="check" style="margin-top:6px"><input type="checkbox" name="<?= e($key) ?>_clear" value="1">Remove the saved token</label><?php endif; ?>
                             <?php elseif ($def[1] === 'checkbox'): ?>
                                 <label class="check"><input type="hidden" name="<?= e($key) ?>" value="0"><input type="checkbox" id="<?= e($id) ?>" name="<?= e($key) ?>" value="1"<?= $val === '1' ? ' checked' : '' ?>><?= e($def[0]) ?></label>
                             <?php else: ?>

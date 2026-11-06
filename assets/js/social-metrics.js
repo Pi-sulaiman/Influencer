@@ -14,6 +14,10 @@
     var wrapper = channel.querySelector('[data-lookup-url]');
     if (!button || !status || !wrapper) return;
     var fields = [channel.querySelector('[data-followers]'), channel.querySelector('[data-views]')];
+    function lock(field, locked) {
+      field.readOnly = locked;
+      field.title = locked ? 'Fetched from your public profile' : '';
+    }
     var icon = wrapper.querySelector('[data-metrics-icon]');
     var ICONS = { idle: 'ph-sparkle', pending: 'ph-circle-notch', ok: 'ph-check-circle', partial: 'ph-info', fail: 'ph-warning-circle', manual: 'ph-pencil-simple' };
     function setState(name, detail) {
@@ -36,6 +40,7 @@
       state.version++;
       if (state.controller) state.controller.abort();
       clearTimeout(state.timer);
+      state.timer = null;
       state.pending = false;
       status.textContent = '';
       setState('idle');
@@ -45,7 +50,7 @@
       if (value !== state.handle) {
         invalidate();
         // Counts belong to the old profile; never carry them to a new handle.
-        fields.forEach(function (field) { field.value = ''; notify(field); });
+        fields.forEach(function (field) { lock(field, false); field.value = ''; notify(field); });
         state.handle = value;
       }
       syncButton();
@@ -54,10 +59,10 @@
     }
     function fetchStats(force) {
       clearTimeout(state.timer);
+      state.timer = null;
       if (!available || link.disabled || !link.value.trim() || state.pending) return;
       var value = link.value.trim();
       var version = ++state.version;
-      var before = fields.map(function (field) { return field.value; });
       state.pending = true;
       status.textContent = 'Looking up public stats… you can keep filling in the form.';
       setState('pending');
@@ -79,25 +84,38 @@
           if (version !== state.version || link.disabled || link.value.trim() !== value) return;
           if (!response.ok) throw new Error(result.message || result.error || 'Lookup failed. Enter your stats manually.');
           var values = [result.followers, result.average_views];
-          var retainedManual = false;
           fields.forEach(function (field, i) {
-            if (values[i] !== null && values[i] !== undefined && field.value === before[i] && (force || before[i] === '')) {
+            var fetched = values[i] !== null && values[i] !== undefined;
+            if (fetched) {
               field.value = String(values[i]);
               notify(field);
-            } else if (field.value !== '' && values[i] !== null && values[i] !== undefined && field.value !== String(values[i])) retainedManual = true;
+            } else if (field.readOnly) {
+              field.value = '';
+              notify(field);
+            }
+            lock(field, fetched);
           });
+          // Engagement rate from Instagram goes into "Add more stats" if it is empty.
+          var er = form.elements.engagement_rate;
+          if (er && result.engagement_rate !== null && result.engagement_rate !== undefined && er.value.trim() === '') {
+            er.value = String(result.engagement_rate);
+            notify(er);
+          }
           var hasF = result.followers !== null && result.followers !== undefined;
           var hasV = result.average_views !== null && result.average_views !== undefined;
-          var message = result.message || 'Stats are unavailable. You can enter them manually.';
+          var message = hasF || hasV ? 'Fetched numbers are locked.' : (result.message || 'Stats are unavailable. You can enter them manually.');
           if (hasF !== hasV) message += hasF ? ' Add your average views yourself.' : ' Add your follower count yourself.';
           if (result.sample_size > 0) message += ' Average from ' + result.sample_size + ' videos.';
-          if (retainedManual) message += ' Your manually entered numbers were kept.';
+          if (result.average_likes !== null && result.average_likes !== undefined) {
+            message += ' Avg. likes: ' + Number(result.average_likes).toLocaleString() + ' (' + result.likes_sample_size + ' Reels).';
+          }
           status.textContent = message;
           // The finer print goes on hover so the form stays calm.
           var detail = [result.sample_description || '', result.fetched_at ? 'Checked ' + new Date(result.fetched_at).toLocaleString() + (result.cached ? ' (saved result)' : '') : ''].filter(Boolean).join(' · ');
           setState(hasF && hasV ? 'ok' : (hasF || hasV ? 'partial' : 'fail'), detail);
         } catch (error) {
           if (version === state.version) {
+            fields.forEach(function (field) { lock(field, false); });
             status.textContent = error.name === 'AbortError' ? 'Lookup timed out. Enter stats manually or try again.' : error.message;
             setState('fail');
           }
@@ -108,18 +126,24 @@
       });
     }
     link.addEventListener('input', changed);
+    state.flush = function () { if (state.timer) { clearTimeout(state.timer); state.timer = null; fetchStats(false); } };
     button.addEventListener('click', function () { fetchStats(true); });
     channel.querySelector('[data-channel-toggle]').addEventListener('click', function () {
       if (link.disabled) invalidate();
-      else if (link.value.trim() && !fields[0].value) fetchStats(false);
+      else if (link.value.trim()) fetchStats(false);
       syncButton();
     });
     syncButton();
+    if (fields.some(function (field) { return field.readOnly; })) {
+      status.textContent = 'Fetched numbers are locked. You can enter any unavailable numbers manually.';
+      setState(fields.every(function (field) { return field.readOnly; }) ? 'ok' : 'partial');
+    }
     if (!link.disabled && link.value.trim() && !fields[0].value && available) fetchStats(false);
   });
 
   // Finish pending fetches before the existing form validation/submission runs.
   form.addEventListener('submit', function (event) {
+    states.forEach(function (state) { state.flush(); });
     if (!states.some(function (state) { return state.pending; })) return;
     event.preventDefault();
     event.stopImmediatePropagation();

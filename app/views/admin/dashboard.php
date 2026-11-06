@@ -48,6 +48,31 @@ $greet = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good ev
     </div>
 </div>
 
+<section class="card" id="impression-estimates" style="margin-bottom:24px">
+    <div class="card-head"><h2>Estimated impressions · planning only</h2></div>
+    <div class="card-body">
+        <p class="small muted">Estimate per video = average views × multiplier. The default 1.0 uses views as a proxy; it is not a validated conversion or measured impressions. Instagram plays and YouTube views do not measure the same thing as impressions.</p>
+        <div class="table-wrap"><table class="table">
+            <thead><tr><th>Platform</th><th>Profiles with views</th><th>Sum of average views</th><th>Estimated impressions (sum)</th><th>Views ÷ followers</th></tr></thead>
+            <tbody><?php foreach ($impressionEstimates as $platform => $estimate): ?>
+                <tr><td><?= e($platformMeta[$platform]['label']) ?></td><td><?= number_format($estimate['profiles']) ?></td>
+                    <td><?= $estimate['views'] !== null ? number_format($estimate['views']) : '—' ?></td>
+                    <td><?= $estimate['estimated_impressions'] !== null ? number_format($estimate['estimated_impressions']) : '—' ?></td>
+                    <td><?= $estimate['views_followers_percent'] !== null ? number_format($estimate['views_followers_percent'], 2) . '%' : '—' ?></td></tr>
+            <?php endforeach; ?></tbody>
+        </table></div>
+        <p class="small muted">Sums combine one average video per profile, not monthly totals or unique reach. Percentage = sum of average views ÷ sum of followers × 100, using only profiles with both values and positive followers. It can exceed 100%. Inputs may be fetched or self-reported; inspect each profile for its source.</p>
+        <form method="post" action="<?= e(url('admin/impression-model')) ?>" class="form-grid" style="margin-top:16px">
+            <?= csrf_field() ?>
+            <?php foreach ($impressionEstimates as $platform => $estimate): ?>
+                <div class="field"><label for="<?= e($platform) ?>-multiplier"><?= e($platformMeta[$platform]['label']) ?> planning multiplier</label>
+                    <input class="input" type="number" min="0.1" max="100" step="any" required id="<?= e($platform) ?>-multiplier" name="<?= e($platform) ?>_multiplier" value="<?= e($estimate['multiplier']) ?>"></div>
+            <?php endforeach; ?>
+            <div><button class="btn btn-outline" type="submit">Save assumptions</button></div>
+        </form>
+    </div>
+</section>
+
 <div class="grid grid-main">
     <section class="card">
         <div class="card-head">

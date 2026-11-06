@@ -66,6 +66,23 @@ function series_by_day($rows, $col, $days)
     return $out;
 }
 
+function admin_impression_model()
+{
+    require_admin();
+    $values = [];
+    foreach (['instagram', 'youtube'] as $platform) {
+        $value = input($platform . '_multiplier');
+        if (!is_scalar($value) || !is_numeric($value) || !is_finite((float) $value) || $value < 0.1 || $value > 100) {
+            flash('error', 'Use an impression multiplier between 0.1 and 100 for each platform.');
+            redirect('admin#impression-estimates');
+        }
+        $values[$platform] = (float) $value;
+    }
+    foreach ($values as $platform => $value) save_setting('impression_multiplier_' . $platform, (string) $value);
+    flash('success', 'Planning assumptions updated. These are not measured impressions.');
+    redirect('admin#impression-estimates');
+}
+
 function admin_dashboard()
 {
     require_admin();
@@ -113,7 +130,21 @@ function admin_dashboard()
     $campaigns = all("SELECT c.*, (SELECT COUNT(*) FROM applications a WHERE a.campaign_id = c.id) AS apps FROM campaigns c WHERE c.status = 'active' ORDER BY c.created_at DESC LIMIT 5");
     $messages = all('SELECT id, name, inquiry_type, message, is_read, created_at FROM messages ORDER BY created_at DESC LIMIT 4');
 
-    admin_render('dashboard', compact('stats', 'regSeries', 'visitSeries', 'niches', 'platforms', 'fees', 'currency', 'recent', 'campaigns', 'messages'), 'Dashboard');
+    $impressionEstimates = [];
+    foreach (['instagram', 'youtube'] as $platform) {
+        // Fixed platform allowlist; pair views and followers for the percentage denominator.
+        $summary = one("SELECT COUNT(*) AS profiles, SUM({$platform}_avg_views) AS views,
+            SUM(CASE WHEN {$platform}_followers > 0 THEN {$platform}_avg_views ELSE NULL END) AS paired_views,
+            SUM(CASE WHEN {$platform}_followers > 0 THEN {$platform}_followers ELSE NULL END) AS paired_followers
+            FROM influencers WHERE is_demo = 0 AND {$platform} IS NOT NULL AND {$platform} <> '' AND {$platform}_avg_views IS NOT NULL");
+        $multiplier = social_impression_multiplier($platform);
+        $projection = social_admin_projection($summary['views'], null, $multiplier);
+        $percentage = social_admin_projection($summary['paired_views'], $summary['paired_followers'], $multiplier);
+        $impressionEstimates[$platform] = $summary + ['multiplier' => $multiplier,
+            'estimated_impressions' => $projection['estimated_impressions'],
+            'views_followers_percent' => $percentage['views_followers_percent']];
+    }
+    admin_render('dashboard', compact('stats', 'regSeries', 'visitSeries', 'niches', 'platforms', 'fees', 'currency', 'recent', 'campaigns', 'messages', 'impressionEstimates'), 'Dashboard');
 }
 
 /* ---------------- Influencers ---------------- */
@@ -818,6 +849,10 @@ function settings_fields()
             'broadcast_instagram' => ['Instagram broadcast channel link (optional)', 'url'],
             'broadcast_telegram' => ['Telegram channel link (optional)', 'url'],
         ],
+        'Instagram (Meta API)' => [
+            'meta_ig_user_id' => ['Instagram business account ID (from Graph API Explorer)', 'text'],
+            'meta_access_token' => ['Meta access token (system user token that never expires)', 'secret'],
+        ],
         'SEO and analytics' => [
             'ga_id' => ['Google Analytics 4 measurement ID (G-XXXXXXX)', 'text'],
             'google_site_verification' => ['Google Search Console verification code', 'text'],
@@ -835,6 +870,13 @@ function admin_settings()
         if ($section === 'site') {
             foreach (settings_fields() as $group) {
                 foreach ($group as $key => $def) {
+                    // Secrets are never shown again; leaving the box empty keeps the saved one.
+                    if ($def[1] === 'secret') {
+                        $secret = trim((string) ($_POST[$key] ?? ''));
+                        if ($secret !== '') save_setting($key, mb_substr($secret, 0, 1000));
+                        if (input($key . '_clear') === '1') save_setting($key, '');
+                        continue;
+                    }
                     $v = mb_substr((string) input($key), 0, 1000);
                     if ($def[1] === 'number') $v = (string) (int) preg_replace('/\D/', '', $v);
                     if ($def[1] === 'currency' && !array_key_exists($v, currencies())) $v = 'INR';

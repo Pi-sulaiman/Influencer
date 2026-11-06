@@ -7,6 +7,8 @@ function social_profile_lookup()
         $platform = input('platform');
         if (!is_string($platform) || !isset(enabled_platforms()[$platform])) throw new InvalidArgumentException('Choose an enabled platform.');
         $identity = social_profile_identity($platform, input('profile'));
+        // A failed retry releases manual entry, including any previous successful result.
+        unset($_SESSION['social_lookups'][$platform]);
         if (!social_rate_limit(ip_hash())) {
             http_response_code(429);
             header('Retry-After: 3600');

@@ -1,34 +1,90 @@
 # Automatic social profile metrics
 
 The PHP creator form calls `POST /api/social-profile` with its existing CSRF token.
-PHP validates and normalizes the profile, applies per-IP and global rate limits,
-and calls a private Python WSGI service. The browser never receives the service
-secret or Instagram session. No paid data provider is required.
+PHP validates and normalizes the profile and applies per-IP and global rate limits.
+**Instagram now reads the public Reels page directly in PHP**, without a Meta API
+token, login, Python service, or paid provider. Other platforms keep their existing
+private Python WSGI service. The browser never receives a service secret.
+
+## Instagram fix: 6 November 2026
+
+`app/instagram_public.php` reads structured JSON embedded in
+`https://www.instagram.com/USERNAME/reels/`. The regular profile feed and individual
+post endpoints previously used by the Python adapter did not return these counts.
+The Reels grid does return play/like/comment counts for the profile tested.
+
+A live PHP check of `chennaiipl` returned 23,267,479 followers, 6,128,120 average
+plays, 322,333 average likes and 2,847 average comments across 8 eligible Reels.
+These are a dated snapshot, not fixed expected values. Up to 12 returned unpinned
+Reels are sampled; pins, duplicate items, unrelated owners, hidden counts and null
+counts are excluded. Zero remains a valid count. This is not a guarantee of the
+latest 12 chronological Reels, nor of consistent access from every hosting IP.
+
+Deploy the complete application changes, including the new `app/instagram_public.php`,
+`app/social_metrics.php`, `index.php`, the join/social/admin controllers, join/admin
+templates, `assets/js/social-metrics.js`, and `assets/css/join.css`. Instagram
+no longer uses the Meta Business Discovery branch or the Python service. Existing
+YouTube routing is unchanged. The Instagram cache namespace was changed so old
+“unconfigured” results do not mask the new adapter.
+
+Average likes appear beside the fetched stats and in the saved admin lookup
+metadata. Instagram impressions remain unavailable. Login walls, rate limits and
+HTML/schema changes produce a manual-entry fallback rather than invented counts.
+Validate from the cPanel hosting IP after deployment:
+
+```sh
+php tests/instagram_public_test.php
+php tests/live_instagram_public.php chennaiipl
+```
 
 ## Implemented scope
 
 | Platform | Adapter | Followers/subscribers | Average views |
 |---|---|---|---|
-| Instagram | Instaloader | When profile access succeeds | Latest 12 videos among up to 36 returned feed posts, only available view counts |
+| Instagram | Direct PHP public Reels page | When profile access succeeds | Up to 12 returned unpinned Reels with public play counts; likes/comments also calculated |
 | YouTube | yt-dlp | Public channel subscriber count, which can be rounded | Up to 12 entries from the Videos tab; excludes Shorts/live streams |
 | TikTok | yt-dlp | Only if the extractor returns `channel_follower_count` | Up to 12 returned profile videos with view counts |
 | Facebook, X, Snapchat, LinkedIn, Threads | Manual entry | Manual | Manual |
 
 This is **not** a promise that every platform returns every metric. Instagram
-frequently requires a logged-in session, and all three platforms can block data
+can restrict anonymous access, and all three platforms can block data
 center IPs, challenge logins or change their endpoints. Missing data stays null;
 real zero values count. Lookup failure never prevents joining. Private Instagram
 media is not collected even when the service account follows that profile.
 
-For Instagram, play counts are used only if no view counts were returned; the
-sample description identifies which counter was used. YouTube tab view counts
+Instagram averages use the Reels grid's `play_count`, not impressions. YouTube tab view counts
 can be rounded public display values, so its average is approximate.
 
 Each average divides the sum of the available view counts by the number of
 videos with a count, up to 12. It is a snapshot of lifetime views on that sample,
 not monthly views. Pinned/feed ordering and missing posts can affect the sample.
-The UI displays the sample count and scope. No estimated impressions are generated.
-Monthly impressions, demographics and engagement remain creator-supplied insights.
+The form displays the sample count and scope. Fetched followers and average views
+are read-only; missing metrics remain editable, including when a lookup fails.
+On submission PHP restores matching fetched values from the visitor's session,
+so browser field tampering cannot change those numbers. Results expire after 24 hours.
+A successful response replaces provisional manual entries even if typed during lookup.
+
+Admin Dashboard and individual creator profiles show an **impressions planning estimate**
+for Instagram and YouTube only. Formula: `average views × platform multiplier`.
+The multiplier defaults to **1.0**, a views-based proxy, not an empirically validated
+impressions conversion. Admins may change each assumption (0.1–100) on the dashboard.
+Actual impressions cannot be inferred reliably from public views. Do not use this proxy
+as measured reach, a monthly total, guaranteed campaign delivery, or YouTube thumbnail impressions.
+YouTube distinguishes views and thumbnail impressions in its
+[metrics documentation](https://support.google.com/youtube/answer/9314486).
+
+The separate percentage is `average views ÷ followers × 100`, as requested.
+It can exceed 100% and is unavailable when followers are zero or missing.
+Missing views yield no estimate, while a real zero yields zero. Dashboard totals sum
+one average video per eligible profile; the dashboard percentage divides summed views
+by summed followers from matched profiles with positive followers, not the mean of percentages.
+Manual inputs are included and identified in profile provenance; demo profiles are excluded.
+
+Calculations use saved metrics and the current assumptions at admin page load, so existing
+profiles work without migration and changing a multiplier updates their estimates immediately.
+No estimated values are returned by the public lookup API, form, or creator card. The old
+monthly impressions input is removed from registration; previously stored monthly values
+are preserved. Demographics and engagement remain creator-supplied insights.
 The legacy `avg_impressions` database field remains for compatibility and stores
 the sum of channel averages; it must not be interpreted as actual impressions or
 a weighted average across platforms. Some older manually entered channel fields
@@ -36,8 +92,10 @@ represent reach/impressions, so the aggregate is labelled “Combined channel av
 
 ## cPanel deployment for peakilo.com
 
-Your cPanel lists **Setup Python App**, **SSH Access**, and **Cron Jobs**. Only the
-Python app is needed; Node.js and Chromium are not required for these adapters.
+Your cPanel lists **Setup Python App**, **SSH Access**, and **Cron Jobs**.
+The steps below apply to the Python service for YouTube/TikTok and the legacy
+Instagram Python adapter. The current PHP Instagram lookup needs only PHP cURL
+and HTTPS access to Instagram; it does not require these Python setup steps.
 
 1. Upload the PHP changes to the existing website. The next installed-site request
    runs migration 10, adding the nullable `influencers.social_metrics` TEXT field.
@@ -109,7 +167,9 @@ for one minute. Rate limits are 30 lookups/hour/IP and 300/hour/site. The JSON r
 map is file-locked across PHP workers. Old cache entries are pruned on cache writes.
 Counts are fetched when a handle is entered or “Fetch stats” is clicked, not on
 every page view or on a recurring schedule. Editing a handle clears the old counts;
-late responses cannot overwrite a different handle or edits made during a lookup.
+late responses cannot overwrite a different handle. A successful lookup replaces manual
+entries for the matching profile and locks only the metrics returned. Failed retries
+clear the previous server-side lookup for that platform, enabling manual fallback.
 
 Registration stores server-side lookup metadata with the creator: source, time,
 sample size and original values, plus separate fetched/manual flags for followers
@@ -124,18 +184,22 @@ session files, cookie files, environment variables or service token to browsers.
 
 ```sh
 php tests/social_metrics_test.php
+php tests/instagram_public_test.php
+python tests/run_social_browser.py
 python -m unittest discover -s services/social-metrics -p "test_*.py" -v
 node --check assets/js/social-metrics.js
 ```
 
 Tests use fixtures for deterministic behavior and never need real account secrets.
-Local verification on 5 November 2026 passed 59 PHP assertions, 10 Python tests,
-and a Chrome test covering automatic fill, edits during lookup, cancelled requests,
-CSRF rejection, PHP-to-service transport, caching and saved registration provenance.
-Public live checks returned YouTube subscribers and an average from four available
+Local verification on 6 November 2026 passed 69 PHP metrics assertions, 14 Instagram
+parser assertions, and Chrome checks for read-only fetched metrics, partial/failed
+manual fallback, changed handles, cancelled requests, forged submitted counts,
+validation re-render, saved provenance, and admin formulas, assumption validation,
+authentication and CSRF. Earlier Python adapter verification passed 10 tests.
+Earlier public live checks returned YouTube subscribers and an average from four available
 view counts among 12 videos, Instagram followers without video counts, and a TikTok
-timeout. Instagram media access and TikTok therefore remain unverified from the
-hosting environment. Do not describe those metrics as operational until tested there.
+timeout. The subsequent direct-PHP Instagram success is recorded above. Instagram
+media access and TikTok remain unverified from the cPanel hosting environment.
 
 The adapter versions are pinned in `requirements.txt`; periodically update them in
 a test environment and repeat known-profile checks from the hosting IP.

@@ -184,10 +184,11 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                         <span class="smart-plats" aria-hidden="true"><?php foreach (array_slice($platforms, 0, 4) as $p): ?><i class="ph-fill <?= e($p['icon']) ?>"></i><?php endforeach; ?></span>
                     </div>
                     <?php $lookupNames = array_values(array_map(function ($p) { return $p['label']; }, array_intersect_key($platforms, array_flip(['instagram', 'youtube', 'tiktok'])))); ?>
-                    <p class="field-help" style="margin-bottom:14px">Tap each platform you post on and add your profile link.<?= $lookupNames ? ' For ' . e(implode(' and ', $lookupNames)) . ' we fill in your followers and average views where the platform shares them.' : '' ?> You can always edit the numbers.</p>
+                    <p class="field-help" style="margin-bottom:14px">Tap each platform you post on and add your profile link.<?= $lookupNames ? ' For ' . e(implode(' and ', $lookupNames)) . ' we fill in your followers and average views where the platform shares them.' : '' ?> Fetched numbers are locked. If a number is unavailable, you can enter it manually.</p>
                     <div class="channels<?= $has('channels') ?>" data-channels>
                         <?php foreach ($platforms as $key => $p):
-                            $on = $data[$key] !== '' || in_array($key, $campaignPlatforms, true) && !$errors && !$posted; ?>
+                            $on = $data[$key] !== '' || in_array($key, $campaignPlatforms, true) && !$errors && !$posted;
+                            $locked = social_trusted_lookup($key, $data[$key]); ?>
                             <div class="channel<?= $on ? ' is-on' : '' ?><?= isset($errors[$key]) || isset($errors[$key . '_followers']) ? ' has-error' : '' ?>" data-channel="<?= e($key) ?>" data-label="<?= e($p['label']) ?>" data-icon="<?= e($p['icon']) ?>" data-domains="<?= e(implode(',', $p['domains'])) ?>">
                                 <button type="button" class="channel-toggle" aria-expanded="<?= $on ? 'true' : 'false' ?>" data-channel-toggle>
                                     <span class="ch-ic"><i class="ph-fill <?= e($p['icon']) ?>" aria-hidden="true"></i></span>
@@ -203,13 +204,13 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                                     </div>
                                     <div class="field<?= $has($key . '_followers') ?>">
                                         <label for="j-<?= e($key) ?>-f"><?= $key === 'youtube' ? 'Subscribers' : 'Followers' ?></label>
-                                        <input class="input" id="j-<?= e($key) ?>-f" name="<?= e($key) ?>_followers" value="<?= e($data[$key . '_followers']) ?>" inputmode="decimal" placeholder="e.g. 45K" data-followers data-count<?= $inv($key . '_followers') ?>>
+                                        <input class="input" id="j-<?= e($key) ?>-f" name="<?= e($key) ?>_followers" value="<?= e($data[$key . '_followers']) ?>" inputmode="decimal" placeholder="e.g. 45K" data-followers data-count<?= isset($locked['followers']) ? ' readonly title="Fetched from your public profile"' : '' ?><?= $inv($key . '_followers') ?>>
                                         <p class="count-hint" data-count-hint></p>
                                         <?= $err($key . '_followers') ?>
                                     </div>
                                     <div class="field">
                                         <label for="j-<?= e($key) ?>-v" title="<?= e($p['views']) ?>">Avg. views <span class="opt">(optional)</span></label>
-                                        <input class="input" id="j-<?= e($key) ?>-v" name="<?= e($key) ?>_avg_views" value="<?= e($data[$key . '_avg_views']) ?>" inputmode="decimal" placeholder="e.g. 12K" data-views data-count>
+                                        <input class="input" id="j-<?= e($key) ?>-v" name="<?= e($key) ?>_avg_views" value="<?= e($data[$key . '_avg_views']) ?>" inputmode="decimal" placeholder="e.g. 12K" data-views data-count<?= isset($locked['average_views']) ? ' readonly title="Fetched from your public profile"' : '' ?>>
                                         <p class="count-hint" data-count-hint></p>
                                         <?= $err($key . '_avg_views') ?>
                                     </div>
@@ -239,8 +240,8 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                         <?= $err('niches') ?>
                     </div>
 
-                    <details class="more-box"<?= $openIf(['primary_platform', 'engagement_rate', 'monthly_impressions', 'website', 'content_types', 'insights_image']) ?>>
-                        <summary><span class="mb-ic"><i class="ph-bold ph-chart-line-up" aria-hidden="true"></i></span><span class="mb-txt"><b>Add more stats</b><small>Engagement, impressions, insights screenshot</small></span><span class="mb-tag">Optional</span><i class="ph-bold ph-plus mb-plus" aria-hidden="true"></i></summary>
+                    <details class="more-box"<?= $openIf(['primary_platform', 'engagement_rate', 'website', 'content_types', 'insights_image']) ?>>
+                        <summary><span class="mb-ic"><i class="ph-bold ph-chart-line-up" aria-hidden="true"></i></span><span class="mb-txt"><b>Add more stats</b><small>Engagement, insights screenshot</small></span><span class="mb-tag">Optional</span><i class="ph-bold ph-plus mb-plus" aria-hidden="true"></i></summary>
                         <div class="more-body">
                             <div class="form-grid">
                                 <div class="field">
@@ -253,12 +254,6 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                                 <div class="field">
                                     <label for="j-er">Average engagement rate</label>
                                     <div class="input-group input-suffix"><input class="input" id="j-er" name="engagement_rate" value="<?= e($data['engagement_rate']) ?>" inputmode="decimal" placeholder="4.5" data-er><span class="suffix">%</span></div>
-                                </div>
-                                <div class="field">
-                                    <label for="j-mi">Impressions, last 30 days</label>
-                                    <input class="input" id="j-mi" name="monthly_impressions" value="<?= e($data['monthly_impressions']) ?>" inputmode="decimal" placeholder="e.g. 2.5M" data-monthly data-count>
-                                    <p class="field-help">Copy this from your account insights. Public video views do not measure impressions.</p>
-                                    <p class="count-hint" data-count-hint></p>
                                 </div>
                                 <div class="field">
                                     <label for="j-web">Website or media kit link</label>

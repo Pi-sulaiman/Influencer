@@ -58,6 +58,7 @@ $routes = [
     ['GET|POST', '/admin/login',              'admin_login'],
     ['POST',     '/admin/logout',             'admin_logout'],
     ['GET',      '/admin',                    'admin_dashboard'],
+    ['POST',     '/admin/impression-model',   'admin_impression_model'],
     ['GET',      '/admin/influencers',        'admin_influencers'],
     ['GET',      '/admin/influencers/export', 'admin_influencers_export'],
     ['POST',     '/admin/influencers/bulk',   'admin_influencers_bulk'],

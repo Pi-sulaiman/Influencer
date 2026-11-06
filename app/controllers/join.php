@@ -66,7 +66,7 @@ function campaign_link($params)
 function join_fields()
 {
     $fields = ['full_name', 'display_name', 'email', 'phone', 'city', 'state', 'country', 'gender', 'languages', 'primary_platform',
-        'website', 'engagement_rate', 'monthly_impressions', 'audience_country', 'audience_age', 'audience_gender', 'past_brands',
+        'website', 'engagement_rate', 'audience_country', 'audience_age', 'audience_gender', 'past_brands',
         'fee_min', 'fee_max', 'currency', 'fee_notes', 'bio', 'pitch'];
     foreach (array_keys(platform_options()) as $p) {
         array_push($fields, $p, $p . '_followers', $p . '_avg_views');
@@ -134,6 +134,7 @@ function join_form()
 
         // Only platforms switched on in Admin > Settings > Platforms are on the form.
         $platforms = enabled_platforms();
+        $data = social_enforce_fetched_values($data, $platforms);
         $hasChannel = false;
         foreach ($platforms as $p => $meta) {
             if ($data[$p] === '') continue;
@@ -219,7 +220,7 @@ function join_form()
                 'fee_notes' => $data['fee_notes'] ?: null,
                 'rate_card' => $rates ? json_encode($rates) : null,
                 'barter_ok' => $data['barter_ok'] ? 1 : 0,
-                'monthly_impressions' => parse_count($data['monthly_impressions']),
+                'monthly_impressions' => $existing['monthly_impressions'] ?? null,
                 'audience_country' => $data['audience_country'] ?: null,
                 'audience_age' => $data['audience_age'] ?: null,
                 'audience_gender' => $data['audience_gender'] ?: null,
