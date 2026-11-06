@@ -448,10 +448,28 @@
 
 /* Fields line up at the top even when one has help text under it */
 .join-form .form-grid { align-items: start; }
-.social-lookup { grid-column: 1 / -1; }
-.social-lookup [data-fetch-metrics] { padding: 7px 0; font-weight: 700; }
-.social-lookup [data-fetch-metrics]:disabled { opacity: .55; cursor: default; }
-.social-lookup [data-metrics-status] { margin-top: 4px; line-height: 1.55; overflow-wrap: anywhere; }
+/* Automatic stats lookup: one calm status row under the fields */
+.social-lookup { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); transition: background-color .25s, border-color .25s; }
+.sl-ic { flex: none; font-size: 18px; color: var(--muted); }
+.sl-status { flex: 1; min-width: 0; margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--text-2); }
+.sl-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); font-size: 13px; font-weight: 700; cursor: pointer; touch-action: manipulation; }
+.sl-btn:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+.sl-btn:disabled { opacity: .5; cursor: default; }
+.social-lookup[data-state="pending"] .sl-ic { color: var(--red); animation: sl-spin 1s linear infinite; }
+@keyframes sl-spin { to { transform: rotate(360deg); } }
+.social-lookup[data-state="ok"] { background: color-mix(in srgb, #1F9D60 9%, var(--surface)); border-color: color-mix(in srgb, #1F9D60 30%, var(--line)); }
+.social-lookup[data-state="ok"] .sl-ic { color: #1F9D60; }
+.social-lookup[data-state="partial"] .sl-ic, .social-lookup[data-state="fail"] .sl-ic { color: #B7791F; }
+.social-lookup[data-state="fail"] { background: color-mix(in srgb, #E8A13A 9%, var(--surface)); border-color: color-mix(in srgb, #E8A13A 32%, var(--line)); }
+.social-lookup[data-state="manual"] { background: transparent; border-style: dashed; }
+/* Channel inputs line up: labels stay on one line */
+.channel-fields .field > label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 640px) {
+  .social-lookup { flex-wrap: wrap; }
+  .sl-status { flex-basis: calc(100% - 30px); }
+  .sl-btn { margin-left: 28px; }
+}
 
 /* "Other city" text box sits under the city list */
 [data-city-field] [data-city-select-wrap]:not([hidden]) + .input:not([hidden]) { margin-top: 8px; }
+.sl-btn[hidden] { display: none; }
