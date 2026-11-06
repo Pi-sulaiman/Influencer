@@ -14,14 +14,23 @@
     var wrapper = channel.querySelector('[data-lookup-url]');
     if (!button || !status || !wrapper) return;
     var fields = [channel.querySelector('[data-followers]'), channel.querySelector('[data-views]')];
+    var icon = wrapper.querySelector('[data-metrics-icon]');
+    var ICONS = { idle: 'ph-sparkle', pending: 'ph-circle-notch', ok: 'ph-check-circle', partial: 'ph-info', fail: 'ph-warning-circle', manual: 'ph-pencil-simple' };
+    function setState(name, detail) {
+      wrapper.setAttribute('data-state', name);
+      if (icon) icon.className = 'sl-ic ph-bold ' + (ICONS[name] || 'ph-info');
+      wrapper.title = detail || '';
+    }
     var state = { version: 0, handle: link.value.trim(), timer: null, controller: null, pending: false };
     states.push(state);
     var available = supported.indexOf(channel.dataset.channel) !== -1;
 
     function syncButton() {
       button.disabled = link.disabled || !link.value.trim() || state.pending || !available;
-      button.textContent = state.pending ? 'Fetching…' : 'Fetch stats';
-      if (!available) status.textContent = 'Enter your stats manually for this platform. Automatic lookup is not available yet.';
+      button.textContent = state.pending ? 'Fetching…' : (wrapper.getAttribute('data-state') === 'idle' ? 'Fetch stats' : 'Try again');
+      button.hidden = !available;
+      if (!available) { status.textContent = 'Add these numbers manually for this platform.'; setState('manual'); }
+      else if (!state.pending && !status.textContent) { status.textContent = 'Add your profile link and we fill in the numbers.'; setState('idle'); }
     }
     function invalidate() {
       state.version++;
@@ -29,6 +38,7 @@
       clearTimeout(state.timer);
       state.pending = false;
       status.textContent = '';
+      setState('idle');
     }
     function changed() {
       var value = link.value.trim();
@@ -49,7 +59,8 @@
       var version = ++state.version;
       var before = fields.map(function (field) { return field.value; });
       state.pending = true;
-      status.textContent = 'Looking up public stats… You can continue filling out the form.';
+      status.textContent = 'Looking up public stats… you can keep filling in the form.';
+      setState('pending');
       syncButton();
       queue = queue.catch(function () {}).then(async function () {
         if (version !== state.version || link.disabled) return;
@@ -75,16 +86,21 @@
               notify(field);
             } else if (field.value !== '' && values[i] !== null && values[i] !== undefined && field.value !== String(values[i])) retainedManual = true;
           });
+          var hasF = result.followers !== null && result.followers !== undefined;
+          var hasV = result.average_views !== null && result.average_views !== undefined;
           var message = result.message || 'Stats are unavailable. You can enter them manually.';
-          if (result.sample_size > 0) message += ' Average based on ' + result.sample_size + ' videos. ' + (result.sample_description || '');
-          if (result.fetched_at) message += ' Checked ' + new Date(result.fetched_at).toLocaleString() + (result.cached ? ' (cached).' : '.');
-          if (result.followers === null) message += ' Follower count unavailable.';
-          if (result.average_views === null) message += ' Average views unavailable.';
+          if (hasF !== hasV) message += hasF ? ' Add your average views yourself.' : ' Add your follower count yourself.';
+          if (result.sample_size > 0) message += ' Average from ' + result.sample_size + ' videos.';
           if (retainedManual) message += ' Your manually entered numbers were kept.';
           status.textContent = message;
+          // The finer print goes on hover so the form stays calm.
+          var detail = [result.sample_description || '', result.fetched_at ? 'Checked ' + new Date(result.fetched_at).toLocaleString() + (result.cached ? ' (saved result)' : '') : ''].filter(Boolean).join(' · ');
+          setState(hasF && hasV ? 'ok' : (hasF || hasV ? 'partial' : 'fail'), detail);
         } catch (error) {
-          if (version === state.version) status.textContent = error.name === 'AbortError'
-            ? 'Lookup timed out. Enter stats manually or try again.' : error.message;
+          if (version === state.version) {
+            status.textContent = error.name === 'AbortError' ? 'Lookup timed out. Enter stats manually or try again.' : error.message;
+            setState('fail');
+          }
         } finally {
           clearTimeout(timeout);
           if (version === state.version) { state.pending = false; state.controller = null; syncButton(); }

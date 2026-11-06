@@ -153,8 +153,8 @@ function social_service_request(array $identity)
     $out['message'] = $out['status'] === 'unsupported'
         ? 'Automatic lookup is not available for this platform yet. Enter your stats below.'
         : ($out['followers'] === null && $out['average_views'] === null
-            ? 'The platform did not share these stats. You can enter them manually or try again later.'
-            : 'Public stats fetched. You can correct them if needed.');
+            ? 'We could not get stats from this profile right now. Add them manually, or try again later.'
+            : 'Filled in from your public profile. Edit them if needed.');
     return $out;
 }
 

@@ -183,7 +183,8 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                         <input id="j-smart" type="url" inputmode="url" placeholder="Paste a profile link to add it fast" autocomplete="off" data-smart-link>
                         <span class="smart-plats" aria-hidden="true"><?php foreach (array_slice($platforms, 0, 4) as $p): ?><i class="ph-fill <?= e($p['icon']) ?>"></i><?php endforeach; ?></span>
                     </div>
-                    <p class="field-help" style="margin-bottom:14px">Add a profile link or handle. We’ll look up available public stats for Instagram, YouTube and TikTok. You can edit the numbers or leave unavailable stats blank.</p>
+                    <?php $lookupNames = array_values(array_map(function ($p) { return $p['label']; }, array_intersect_key($platforms, array_flip(['instagram', 'youtube', 'tiktok'])))); ?>
+                    <p class="field-help" style="margin-bottom:14px">Tap each platform you post on and add your profile link.<?= $lookupNames ? ' For ' . e(implode(' and ', $lookupNames)) . ' we fill in your followers and average views where the platform shares them.' : '' ?> You can always edit the numbers.</p>
                     <div class="channels<?= $has('channels') ?>" data-channels>
                         <?php foreach ($platforms as $key => $p):
                             $on = $data[$key] !== '' || in_array($key, $campaignPlatforms, true) && !$errors && !$posted; ?>
@@ -201,20 +202,21 @@ $rateOpen = isset($errors['rate_card_image']) || array_filter(array_map(function
                                         <?= $err($key) ?>
                                     </div>
                                     <div class="field<?= $has($key . '_followers') ?>">
-                                        <label for="j-<?= e($key) ?>-f"><?= $key === 'youtube' ? 'Subscribers' : 'Followers' ?> <span class="opt">(optional if unavailable)</span></label>
+                                        <label for="j-<?= e($key) ?>-f"><?= $key === 'youtube' ? 'Subscribers' : 'Followers' ?></label>
                                         <input class="input" id="j-<?= e($key) ?>-f" name="<?= e($key) ?>_followers" value="<?= e($data[$key . '_followers']) ?>" inputmode="decimal" placeholder="e.g. 45K" data-followers data-count<?= $inv($key . '_followers') ?>>
                                         <p class="count-hint" data-count-hint></p>
                                         <?= $err($key . '_followers') ?>
                                     </div>
                                     <div class="field">
-                                        <label for="j-<?= e($key) ?>-v"><?= e($p['views']) ?> <span class="opt">(optional)</span></label>
+                                        <label for="j-<?= e($key) ?>-v" title="<?= e($p['views']) ?>">Avg. views <span class="opt">(optional)</span></label>
                                         <input class="input" id="j-<?= e($key) ?>-v" name="<?= e($key) ?>_avg_views" value="<?= e($data[$key . '_avg_views']) ?>" inputmode="decimal" placeholder="e.g. 12K" data-views data-count>
                                         <p class="count-hint" data-count-hint></p>
                                         <?= $err($key . '_avg_views') ?>
                                     </div>
-                                    <div class="social-lookup js-only" data-lookup-url="<?= e(url('api/social-profile')) ?>">
-                                        <button type="button" class="link-btn" data-fetch-metrics>Fetch stats</button>
-                                        <p class="field-help" data-metrics-status role="status" aria-live="polite"></p>
+                                    <div class="social-lookup js-only" data-lookup-url="<?= e(url('api/social-profile')) ?>" data-state="idle">
+                                        <i class="sl-ic ph-bold ph-sparkle" aria-hidden="true" data-metrics-icon></i>
+                                        <p class="sl-status" data-metrics-status role="status" aria-live="polite"></p>
+                                        <button type="button" class="sl-btn" data-fetch-metrics>Fetch stats</button>
                                     </div>
                                 </div>
                             </div>
